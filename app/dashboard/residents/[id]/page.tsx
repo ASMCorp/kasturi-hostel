@@ -19,9 +19,10 @@ export default async function ResidentDetailPage({
   searchParams,
 }: {
   params: { id: string };
-  searchParams: { month?: string };
+  searchParams: { month?: string; paid?: string };
 }) {
   const month = searchParams.month || currentMonth();
+  const paidJustNow = searchParams.paid === "1";
   const sb = getSupabaseAdmin();
 
   const { data: rData } = await sb
@@ -56,11 +57,31 @@ export default async function ResidentDetailPage({
       ? "Partial"
       : "Paid";
 
+  // Latest payment for this month — used for a single receipt button
+  // (the receipt already lists every payment up to and including it).
+  const latestMonthPayment = monthPayments[0];
+
+  // One receipt per month for the history table: the latest payment of each
+  // month (payments are ordered month desc, paid_at desc, so the first row
+  // seen for a month is its latest payment).
+  const latestPaymentIdByMonth = new Map<string, string>();
+  for (const p of payments) {
+    if (!latestPaymentIdByMonth.has(p.period_month)) {
+      latestPaymentIdByMonth.set(p.period_month, p.id);
+    }
+  }
+
   return (
     <div>
       <Link href="/dashboard" className="text-sm text-brand hover:underline">
         ← All residents
       </Link>
+
+      {paidJustNow && (
+        <div className="mt-3 rounded-lg bg-brand-light border border-brand/30 text-brand-dark px-4 py-3 text-sm font-medium">
+          ✓ Payment successful
+        </div>
+      )}
 
       <div className="flex flex-wrap items-start justify-between gap-3 mt-2 mb-5">
         <div>
@@ -149,12 +170,6 @@ export default async function ResidentDetailPage({
                       </span>
                     </span>
                     <span className="flex items-center gap-2">
-                      <Link
-                        href={`/dashboard/receipt/${p.id}`}
-                        className="text-brand text-xs hover:underline"
-                      >
-                        Receipt
-                      </Link>
                       <form action={deletePayment}>
                         <input type="hidden" name="id" value={p.id} />
                         <input
@@ -170,6 +185,15 @@ export default async function ResidentDetailPage({
                   </li>
                 ))}
               </ul>
+
+              {latestMonthPayment && (
+                <Link
+                  href={`/dashboard/receipt/${latestMonthPayment.id}`}
+                  className="mt-3 inline-flex items-center justify-center w-full rounded-lg border border-brand text-brand px-3 py-2 text-sm font-medium hover:bg-brand-light"
+                >
+                  🖨 Print receipt
+                </Link>
+              )}
             </div>
           )}
         </div>
@@ -224,7 +248,7 @@ export default async function ResidentDetailPage({
               />
             </div>
             <button className="w-full rounded-lg bg-brand text-white py-2 text-sm font-medium hover:bg-brand-dark">
-              Save payment & print receipt
+              Save payment
             </button>
           </form>
         </div>
@@ -262,12 +286,16 @@ export default async function ResidentDetailPage({
                 </td>
                 <td className="px-4 py-2">{p.method || "—"}</td>
                 <td className="px-4 py-2">
-                  <Link
-                    href={`/dashboard/receipt/${p.id}`}
-                    className="text-brand hover:underline"
-                  >
-                    #{p.receipt_no}
-                  </Link>
+                  {latestPaymentIdByMonth.get(p.period_month) === p.id ? (
+                    <Link
+                      href={`/dashboard/receipt/${p.id}`}
+                      className="text-brand hover:underline"
+                    >
+                      Print receipt
+                    </Link>
+                  ) : (
+                    <span className="text-gray-300">—</span>
+                  )}
                 </td>
               </tr>
             ))}
