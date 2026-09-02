@@ -100,7 +100,7 @@ export async function recordPayment(formData: FormData) {
     .single();
   if (error) throw new Error(error.message);
   revalidatePath(`/dashboard/residents/${residentId}`);
-  redirect(`/dashboard/receipt/${data.id}`);
+  redirect(`/dashboard/residents/${residentId}?month=${ym}&paid=1`);
 }
 
 export async function deletePayment(formData: FormData) {

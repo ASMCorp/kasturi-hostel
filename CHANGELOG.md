@@ -6,6 +6,17 @@ in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-09-03
+
+### Changed
+- Recording a payment now shows a **"Payment successful"** confirmation on the
+  resident page instead of jumping straight to the receipt.
+- Receipt printing is now a **single button per billing month** (in the
+  this-month panel and once per month in the payment history) instead of a
+  separate receipt link for every individual payment. The receipt already lists
+  all payments for the month, so one button covers them all.
+- "Save payment & print receipt" button relabeled to "Save payment".
+
 ## [0.3.0] - 2026-09-03
 
 ### Changed
@@ -46,6 +57,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Dashboard with per-month payment status and collection totals.
 - Printable per-payment receipt.
 
+[0.4.0]: https://github.com/ASMCorp/kasturi-hostel/releases/tag/v0.4.0
 [0.3.0]: https://github.com/ASMCorp/kasturi-hostel/releases/tag/v0.3.0
 [0.2.0]: https://github.com/ASMCorp/kasturi-hostel/releases/tag/v0.2.0
 [0.1.0]: https://github.com/ASMCorp/kasturi-hostel/releases/tag/v0.1.0

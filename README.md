@@ -14,7 +14,7 @@ Admin-only management system for **Kasturi Girls Hostel**. First module: **month
 - **Delete a resident (soft delete)** — hidden from lists, payment history preserved, reversible via `deleted_at`
 - Record payments per billing month — **partial payments supported** (multiple payments per month; a month is "Paid" once the total reaches the fee)
 - Dashboard with per-month payment status (Paid / Partial / Unpaid) and collection totals
-- **Printable receipts** — a receipt lists every payment for that billing month up to and including the printed one (each with its own payment time), shows the running total and Partial/Paid status, and prints only the resident's name, room, and month in the header
+- **Printable receipts** — recording a payment shows a "Payment successful" confirmation; a single "Print receipt" button per billing month opens a receipt that lists every payment for that month (each with its own payment time), shows the running total and Partial/Paid status, and prints only the resident's name, room, and month in the header
 
 ## Environment variables
 See `.env.example`. Required:
