@@ -31,6 +31,7 @@ export default async function ResidentDetailPage({
     .single();
   if (!rData) notFound();
   const resident = rData as Resident;
+  if (resident.deleted_at) notFound();
 
   const { data: allPayments } = await sb
     .from("payments")

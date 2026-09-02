@@ -63,14 +63,11 @@ export async function deleteResident(formData: FormData) {
   const id = formData.get("id") as string;
   if (!id) throw new Error("Missing resident id");
 
-  // Remove the resident's payments first, then the resident.
-  const { error: payErr } = await sb
-    .from("payments")
-    .delete()
-    .eq("resident_id", id);
-  if (payErr) throw new Error(payErr.message);
-
-  const { error } = await sb.from("residents").delete().eq("id", id);
+  // Soft delete: mark as deleted and deactivate, keeping payment history intact.
+  const { error } = await sb
+    .from("residents")
+    .update({ deleted_at: new Date().toISOString(), active: false })
+    .eq("id", id);
   if (error) throw new Error(error.message);
   revalidatePath("/dashboard");
   redirect("/dashboard");

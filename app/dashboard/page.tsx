@@ -25,6 +25,7 @@ export default async function DashboardPage({
   const { data: residents } = await sb
     .from("residents")
     .select("*")
+    .is("deleted_at", null)
     .order("active", { ascending: false })
     .order("name", { ascending: true });
 

@@ -15,7 +15,7 @@ export default function DeleteResidentButton({
       onSubmit={(e) => {
         if (
           !confirm(
-            `Delete ${residentName}? This permanently removes the resident and all their payment records. This cannot be undone.`
+            `Delete ${residentName}? They will be removed from the resident list. Payment history is kept and this can be restored later.`
           )
         ) {
           e.preventDefault();
