@@ -57,6 +57,22 @@ export async function updateResident(formData: FormData) {
   redirect(`/dashboard/residents/${id}`);
 }
 
+export async function deleteResident(formData: FormData) {
+  await requireAdmin();
+  const sb = getSupabaseAdmin();
+  const id = formData.get("id") as string;
+  if (!id) throw new Error("Missing resident id");
+
+  // Soft delete: mark as deleted and deactivate, keeping payment history intact.
+  const { error } = await sb
+    .from("residents")
+    .update({ deleted_at: new Date().toISOString(), active: false })
+    .eq("id", id);
+  if (error) throw new Error(error.message);
+  revalidatePath("/dashboard");
+  redirect("/dashboard");
+}
+
 export async function recordPayment(formData: FormData) {
   const session = await requireAdmin();
   const sb = getSupabaseAdmin();

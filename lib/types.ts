@@ -8,6 +8,7 @@ export type Resident = {
   room_number: string | null;
   monthly_fee: number;
   active: boolean;
+  deleted_at: string | null;
   created_at: string;
 };
 

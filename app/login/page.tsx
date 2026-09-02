@@ -33,7 +33,7 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <div className="mx-auto mb-3 h-16 w-16 rounded-full bg-brand flex items-center justify-center text-white text-2xl font-bold">
+          <div className="mx-auto mb-3 h-16 w-16 rounded-full bg-brand flex items-center justify-center text-white text-2xl font-bold ring-4 ring-accent">
             K
           </div>
           <h1 className="text-xl font-bold text-brand-dark">Kasturi Girls Hostel</h1>

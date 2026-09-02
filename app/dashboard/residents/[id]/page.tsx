@@ -10,6 +10,7 @@ import {
   formatTaka,
   formatMonth,
 } from "@/lib/types";
+import DeleteResidentButton from "@/components/DeleteResidentButton";
 
 export const dynamic = "force-dynamic";
 
@@ -30,6 +31,7 @@ export default async function ResidentDetailPage({
     .single();
   if (!rData) notFound();
   const resident = rData as Resident;
+  if (resident.deleted_at) notFound();
 
   const { data: allPayments } = await sb
     .from("payments")
@@ -68,12 +70,18 @@ export default async function ResidentDetailPage({
             {resident.school || "—"}
           </p>
         </div>
-        <Link
-          href={`/dashboard/residents/${resident.id}/edit`}
-          className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-50"
-        >
-          Edit info
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            href={`/dashboard/residents/${resident.id}/edit`}
+            className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-50"
+          >
+            Edit info
+          </Link>
+          <DeleteResidentButton
+            residentId={resident.id}
+            residentName={resident.name}
+          />
+        </div>
       </div>
 
       <div className="grid sm:grid-cols-4 gap-3 mb-6 text-sm">
