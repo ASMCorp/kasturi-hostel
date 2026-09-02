@@ -28,19 +28,26 @@ export default async function ReceiptPage({
   if (!rData) notFound();
   const resident = rData as Resident;
 
-  // Total paid for that billing month (for context on the receipt)
+  // All payments for that billing month, oldest first.
   const { data: monthPays } = await sb
     .from("payments")
-    .select("amount")
+    .select("*")
     .eq("resident_id", resident.id)
-    .eq("period_month", payment.period_month);
-  const paidMonth =
-    (monthPays as { amount: number }[] | null)?.reduce(
-      (s, p) => s + Number(p.amount),
-      0
-    ) || 0;
+    .eq("period_month", payment.period_month)
+    .order("paid_at", { ascending: true });
+
+  const all = (monthPays as Payment[] | null) || [];
+
+  // Show every transaction made up to and including the one being printed.
+  const cutoff = new Date(payment.paid_at).getTime();
+  const shown = all.filter(
+    (p) => new Date(p.paid_at).getTime() <= cutoff || p.id === payment.id
+  );
+
+  const paidSoFar = shown.reduce((s, p) => s + Number(p.amount), 0);
   const fee = Number(resident.monthly_fee);
-  const remaining = Math.max(fee - paidMonth, 0);
+  const remaining = Math.max(fee - paidSoFar, 0);
+  const isPaid = fee > 0 && paidSoFar >= fee;
 
   return (
     <div>
@@ -78,42 +85,73 @@ export default async function ReceiptPage({
           </div>
         </div>
 
-        {/* Resident */}
-        <div className="grid grid-cols-2 gap-y-2 gap-x-6 text-sm mb-6">
+        {/* Resident — name, room, month only */}
+        <div className="grid grid-cols-3 gap-x-6 text-sm mb-6">
           <Line k="Name" v={resident.name} />
           <Line k="Room" v={resident.room_number || "—"} />
-          <Line k="Class" v={resident.class || "—"} />
-          <Line k="School / Institution" v={resident.school || "—"} />
-          <Line k="Phone" v={resident.phone || "—"} />
-          <Line k="Billing month" v={formatMonth(payment.period_month)} />
+          <Line k="Month" v={formatMonth(payment.period_month)} />
         </div>
 
-        {/* Payment box */}
-        <div className="bg-brand-light rounded-lg p-5 mb-6">
-          <div className="flex items-center justify-between">
-            <span className="text-gray-600">Amount paid</span>
-            <span className="text-2xl font-bold text-brand-dark">
-              {formatTaka(Number(payment.amount))}
-            </span>
-          </div>
-          {payment.method && (
-            <div className="flex justify-between text-sm mt-2">
-              <span className="text-gray-600">Method</span>
-              <span>{payment.method}</span>
-            </div>
-          )}
-          {payment.note && (
-            <div className="flex justify-between text-sm mt-1">
-              <span className="text-gray-600">Note</span>
-              <span>{payment.note}</span>
-            </div>
-          )}
+        {/* Status */}
+        <div className="mb-6">
+          <span
+            className={`inline-block rounded-full px-3 py-1 text-sm font-semibold ${
+              isPaid
+                ? "bg-brand-light text-brand-dark"
+                : "bg-accent-light text-accent-dark"
+            }`}
+          >
+            {isPaid ? "Paid ✓" : "Partial payment"}
+          </span>
         </div>
 
-        {/* Month status */}
+        {/* All transactions for this month up to this receipt */}
+        <div className="border border-gray-200 rounded-lg overflow-hidden mb-6">
+          <table className="w-full text-sm">
+            <thead className="bg-gray-50 text-gray-500 text-left">
+              <tr>
+                <th className="px-4 py-2 font-medium">#</th>
+                <th className="px-4 py-2 font-medium">Payment time</th>
+                <th className="px-4 py-2 font-medium">Method</th>
+                <th className="px-4 py-2 font-medium text-right">Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              {shown.map((p, i) => (
+                <tr
+                  key={p.id}
+                  className={`border-t border-gray-100 ${
+                    p.id === payment.id ? "bg-accent-light/40" : ""
+                  }`}
+                >
+                  <td className="px-4 py-2.5">{i + 1}</td>
+                  <td className="px-4 py-2.5">
+                    {new Date(p.paid_at).toLocaleString()}
+                  </td>
+                  <td className="px-4 py-2.5">{p.method || "—"}</td>
+                  <td className="px-4 py-2.5 text-right font-medium">
+                    {formatTaka(Number(p.amount))}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+            <tfoot>
+              <tr className="border-t-2 border-gray-200 bg-gray-50">
+                <td className="px-4 py-2.5 font-semibold" colSpan={3}>
+                  Total paid
+                </td>
+                <td className="px-4 py-2.5 text-right font-bold text-brand-dark">
+                  {formatTaka(paidSoFar)}
+                </td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+
+        {/* Summary */}
         <div className="border border-gray-200 rounded-lg divide-y divide-gray-100 text-sm mb-8">
           <Stat k="Monthly fee" v={formatTaka(fee)} />
-          <Stat k={`Total paid for ${formatMonth(payment.period_month)}`} v={formatTaka(paidMonth)} />
+          <Stat k="Total paid" v={formatTaka(paidSoFar)} />
           <Stat
             k="Remaining balance"
             v={remaining > 0 ? formatTaka(remaining) : "Fully paid ✓"}
@@ -165,7 +203,7 @@ function Stat({
   return (
     <div className="flex justify-between px-4 py-2.5">
       <span className="text-gray-600">{k}</span>
-      <span className={highlight ? "font-semibold text-amber-700" : "font-medium"}>
+      <span className={highlight ? "font-semibold text-accent-dark" : "font-medium"}>
         {v}
       </span>
     </div>

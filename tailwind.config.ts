@@ -8,10 +8,16 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        // Kasturi theme — green band + golden-yellow sign
         brand: {
-          DEFAULT: "#7c2d5c",
-          dark: "#5c1f44",
-          light: "#f7ecf3",
+          DEFAULT: "#3f7d24",
+          dark: "#2c5a18",
+          light: "#eef6e6",
+        },
+        accent: {
+          DEFAULT: "#f4c421",
+          dark: "#d9a400",
+          light: "#fdf6d8",
         },
       },
     },

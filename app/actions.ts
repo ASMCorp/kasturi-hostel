@@ -57,6 +57,25 @@ export async function updateResident(formData: FormData) {
   redirect(`/dashboard/residents/${id}`);
 }
 
+export async function deleteResident(formData: FormData) {
+  await requireAdmin();
+  const sb = getSupabaseAdmin();
+  const id = formData.get("id") as string;
+  if (!id) throw new Error("Missing resident id");
+
+  // Remove the resident's payments first, then the resident.
+  const { error: payErr } = await sb
+    .from("payments")
+    .delete()
+    .eq("resident_id", id);
+  if (payErr) throw new Error(payErr.message);
+
+  const { error } = await sb.from("residents").delete().eq("id", id);
+  if (error) throw new Error(error.message);
+  revalidatePath("/dashboard");
+  redirect("/dashboard");
+}
+
 export async function recordPayment(formData: FormData) {
   const session = await requireAdmin();
   const sb = getSupabaseAdmin();
