@@ -10,5 +10,10 @@ export function getSupabaseAdmin() {
   }
   return createClient(url, key, {
     auth: { persistSession: false, autoRefreshToken: false },
+    global: {
+      // Disable Next.js fetch caching so reads always reflect the live DB.
+      fetch: (input, init) =>
+        fetch(input, { ...init, cache: "no-store" }),
+    },
   });
 }
