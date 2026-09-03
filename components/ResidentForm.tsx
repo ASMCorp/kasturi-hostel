@@ -8,7 +8,7 @@ import SubmitButton from "@/components/ui/SubmitButton";
 
 const initialState: FormActionState = { error: null };
 const inputClass =
-  "min-h-11 w-full rounded-xl border border-stone-300 bg-white px-3.5 py-2.5 text-base text-stone-900 outline-none transition placeholder:text-stone-400 focus:border-brand focus:ring-4 focus:ring-brand/15 disabled:bg-stone-100 sm:text-sm";
+  "min-h-11 w-full rounded-xl border border-line bg-white px-3.5 py-2.5 text-base text-charcoal outline-none transition placeholder:text-muted/70 focus:border-brand focus:ring-4 focus:ring-brand/15 disabled:bg-stone-100 sm:text-sm";
 
 export default function ResidentForm({
   action,
@@ -104,14 +104,14 @@ export default function ResidentForm({
         {resident && (
           <label
             htmlFor="resident-active"
-            className="mt-5 flex min-h-11 cursor-pointer items-center gap-3 rounded-xl border border-stone-200 bg-stone-50 px-3.5 py-2.5 text-sm font-medium text-stone-700"
+            className="mt-5 flex min-h-11 cursor-pointer items-center gap-3 rounded-xl border border-line bg-stone-50 px-3.5 py-2.5 text-sm font-medium text-charcoal"
           >
             <input
               id="resident-active"
               type="checkbox"
               name="active"
               defaultChecked={resident.active}
-              className="h-5 w-5 rounded border-stone-300 text-brand focus:ring-brand"
+              className="h-5 w-5 rounded border-line text-brand focus:ring-brand"
             />
             Active resident
           </label>
@@ -124,14 +124,14 @@ export default function ResidentForm({
         </p>
       )}
 
-      <div className="flex flex-col-reverse gap-3 rounded-2xl border border-stone-200 bg-white p-4 sm:flex-row sm:items-center sm:justify-end">
+      <div className="flex flex-col-reverse gap-3 rounded-2xl border border-line bg-white p-4 sm:flex-row sm:items-center sm:justify-end">
         <Link
           href={cancelHref}
-          className="inline-flex min-h-11 items-center justify-center rounded-xl border border-stone-300 px-5 py-2.5 text-sm font-semibold text-stone-700 transition hover:bg-stone-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-stone-300/60"
+          className="btn-secondary px-5 py-2.5"
         >
           Cancel
         </Link>
-        <SubmitButton pendingLabel={resident ? "Saving changes…" : "Adding resident…"} className="min-h-11 rounded-xl bg-brand px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/30 disabled:cursor-not-allowed disabled:opacity-60">
+        <SubmitButton pendingLabel={resident ? "Saving changes…" : "Adding resident…"} className="px-5 py-2.5">
           {submitLabel}
         </SubmitButton>
       </div>
@@ -149,11 +149,11 @@ function FormSection({
   children: React.ReactNode;
 }) {
   return (
-    <fieldset className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm sm:p-6">
+    <fieldset className="rounded-2xl border border-line bg-white p-4 shadow-sm sm:p-6">
       <legend className="sr-only">{eyebrow}</legend>
       <div className="mb-5">
         <p className="text-xs font-bold uppercase tracking-[0.16em] text-brand">{eyebrow}</p>
-        <h2 className="mt-1 text-lg font-bold text-stone-900">{title}</h2>
+        <h2 className="mt-1 text-lg font-bold text-charcoal">{title}</h2>
       </div>
       {children}
     </fieldset>
@@ -189,7 +189,7 @@ function Field({
 }) {
   return (
     <div className={className}>
-      <label htmlFor={id} className="mb-1.5 block text-sm font-semibold text-stone-700">
+      <label htmlFor={id} className="mb-1.5 block text-sm font-semibold text-charcoal">
         {label}
         {required && <span className="text-red-600"> *</span>}
       </label>

@@ -7,7 +7,7 @@ import SubmitButton from "@/components/ui/SubmitButton";
 
 const initialState: FormActionState = { error: null };
 const inputClass =
-  "min-h-11 w-full rounded-xl border border-stone-300 bg-white px-3.5 py-2.5 text-base text-stone-900 outline-none transition placeholder:text-stone-400 focus:border-brand focus:ring-4 focus:ring-brand/15 sm:text-sm";
+  "min-h-11 w-full rounded-xl border border-line bg-white px-3.5 py-2.5 text-base text-charcoal outline-none transition placeholder:text-muted/70 focus:border-brand focus:ring-4 focus:ring-brand/15 sm:text-sm";
 
 export default function PaymentForm({
   residentId,
@@ -40,7 +40,7 @@ export default function PaymentForm({
           {state.error}
         </p>
       )}
-      <SubmitButton pendingLabel="Saving payment…" className="min-h-11 w-full rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/30 disabled:cursor-not-allowed disabled:opacity-60">
+      <SubmitButton pendingLabel="Saving payment…" fullWidth className="mt-1">
         Save payment
       </SubmitButton>
     </form>
@@ -50,7 +50,7 @@ export default function PaymentForm({
 function Field({ id, label, children }: { id: string; label: string; children: React.ReactNode }) {
   return (
     <div>
-      <label htmlFor={id} className="mb-1.5 block text-sm font-semibold text-stone-700">{label}</label>
+      <label htmlFor={id} className="mb-1.5 block text-sm font-semibold text-charcoal">{label}</label>
       {children}
     </div>
   );

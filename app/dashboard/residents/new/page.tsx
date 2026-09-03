@@ -8,10 +8,10 @@ export default function NewResidentPage() {
       <Link href="/dashboard" className="inline-flex min-h-11 items-center text-sm font-semibold text-brand hover:underline focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/20">
         ← All residents
       </Link>
-      <header className="rounded-3xl bg-stone-900 p-5 text-white sm:p-7">
-        <p className="text-xs font-bold uppercase tracking-[0.18em] text-yellow-300">Resident directory</p>
+      <header className="rounded-shell bg-charcoal p-5 text-white sm:p-7">
+        <p className="text-xs font-bold uppercase tracking-[0.18em] text-accent">Resident directory</p>
         <h1 className="mt-2 text-3xl font-bold tracking-tight">Add a resident</h1>
-        <p className="mt-2 max-w-2xl text-sm leading-6 text-stone-300">Create their profile, education details, room assignment, and monthly billing rate.</p>
+        <p className="mt-2 max-w-2xl text-sm leading-6 text-white/70">Create their profile, education details, room assignment, and monthly billing rate.</p>
       </header>
       <ResidentForm action={addResident} submitLabel="Add resident" cancelHref="/dashboard" />
     </div>

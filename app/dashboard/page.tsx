@@ -7,7 +7,7 @@ import {
   formatTaka,
   formatMonth,
 } from "@/lib/types";
-import DashboardMonthPicker from "@/components/DashboardMonthPicker";
+import MonthNavigator from "@/components/MonthNavigator";
 import ResidentDirectory, {
   ResidentDirectoryRow,
 } from "@/components/ResidentDirectory";
@@ -95,7 +95,12 @@ export default async function DashboardPage({
             Payment status for {formatMonth(monthToDate(month))}
           </p>
         </div>
-        <DashboardMonthPicker month={month} />
+        <div className="w-full sm:w-auto">
+          <p className="mb-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-muted">
+            Billing month
+          </p>
+          <MonthNavigator month={month} tone="light" />
+        </div>
       </div>
 
       <section aria-label="Monthly payment summary" className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">

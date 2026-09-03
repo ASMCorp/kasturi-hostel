@@ -10,6 +10,7 @@
   --surface: #faf9f3;
   --surface-elevated: #ffffff;
   --charcoal: #20241f;
+  --charcoal-light: #2c312a;
   --border: #dfe3d7;
   --muted: #667064;
   --radius-card: 1.375rem;
@@ -75,8 +76,27 @@ textarea:disabled {
     box-shadow: var(--shadow-card);
   }
 
+  /* Single dark surface used everywhere a charcoal panel is needed */
+  .surface-dark {
+    @apply rounded-card border border-white/10 bg-charcoal text-white;
+    box-shadow: var(--shadow-card);
+  }
+
+  .surface-dark-nested {
+    @apply rounded-xl border border-white/10 bg-charcoal-light;
+  }
+
+  /* Standard field used across all forms */
+  .field-label {
+    @apply mb-1.5 block text-sm font-semibold text-charcoal;
+  }
+
   .control {
-    @apply min-h-11 rounded-xl border border-line bg-white px-3 text-sm text-charcoal shadow-sm transition-colors placeholder:text-muted/70 hover:border-brand/40 focus:border-brand focus:outline-none focus:ring-4 focus:ring-brand/15 disabled:bg-stone-100 disabled:text-muted disabled:opacity-70;
+    @apply min-h-11 rounded-xl border border-line bg-white px-3.5 text-base text-charcoal shadow-sm transition-colors placeholder:text-muted/70 hover:border-brand/40 focus:border-brand focus:outline-none focus:ring-4 focus:ring-brand/15 disabled:bg-stone-100 disabled:text-muted disabled:opacity-70 sm:text-sm;
+  }
+
+  .control-dark {
+    @apply min-h-11 rounded-xl border border-white/15 bg-white/10 px-3.5 text-base text-white shadow-sm transition-colors placeholder:text-white/50 hover:border-accent/50 focus:border-accent focus:outline-none focus:ring-4 focus:ring-accent/25 disabled:opacity-60 sm:text-sm;
   }
 
   .btn {
@@ -100,7 +120,12 @@ textarea:disabled {
   }
 
   .btn-dark {
-    @apply btn bg-charcoal text-white hover:bg-black;
+    @apply btn bg-charcoal text-white hover:bg-black focus-visible:ring-accent/40;
+  }
+
+  /* Outline button placed on a dark surface */
+  .btn-on-dark {
+    @apply btn border border-white/20 bg-white/5 text-white hover:bg-white/15 focus-visible:ring-accent/40;
   }
 }
 
@@ -123,13 +148,21 @@ textarea:disabled {
 }
 
 @media print {
+  /* Force backgrounds/colors so the printed PDF matches the on-screen preview */
+  *,
+  *::before,
+  *::after {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
   .no-print {
     display: none !important;
   }
 
   html,
   body {
-    background: #fff;
+    background: #fff !important;
   }
 
   .app-shell {
@@ -137,10 +170,20 @@ textarea:disabled {
     border: 0;
     border-radius: 0;
     box-shadow: none;
+    background: #fff !important;
+  }
+
+  .app-shell main {
+    padding: 0 !important;
   }
 
   .print-area {
     box-shadow: none !important;
-    border: none !important;
+    border: 1px solid #e7e5e4 !important;
+    max-width: 100% !important;
+  }
+
+  @page {
+    margin: 14mm;
   }
 }

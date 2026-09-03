@@ -12,7 +12,7 @@ import {
 import DeleteResidentButton from "@/components/DeleteResidentButton";
 import DeletePaymentButton from "@/components/DeletePaymentButton";
 import PaymentForm from "@/components/PaymentForm";
-import ResidentMonthPicker from "@/components/ResidentMonthPicker";
+import MonthNavigator from "@/components/MonthNavigator";
 
 export const dynamic = "force-dynamic";
 
@@ -73,12 +73,12 @@ export default async function ResidentDetailPage({
       </Link>
 
       {paidJustNow && (
-        <div role="status" className="rounded-2xl border border-green-300 bg-green-50 px-4 py-3 text-sm font-semibold text-green-900">
+        <div role="status" className="rounded-2xl border border-brand/30 bg-brand-light px-4 py-3 text-sm font-semibold text-brand-dark">
           Payment recorded successfully.
         </div>
       )}
 
-      <section className="overflow-hidden rounded-3xl border border-white/80 bg-gradient-to-br from-brand-light via-white to-accent-light p-5 shadow-sm sm:p-7">
+      <section className="overflow-hidden rounded-card border border-white/80 bg-gradient-to-br from-brand-light via-white to-accent-light p-5 shadow-card sm:p-7">
         <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
           <div className="min-w-0">
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-brand">Resident profile</p>
@@ -88,7 +88,7 @@ export default async function ResidentDetailPage({
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <span className={`rounded-full border px-3 py-1.5 text-xs font-bold ${resident.active ? "border-green-300 bg-green-100 text-green-900" : "border-stone-300 bg-stone-100 text-stone-700"}`}>
+            <span className={`rounded-full border px-3 py-1.5 text-xs font-bold ${resident.active ? "border-brand/30 bg-brand-light text-brand-dark" : "border-line bg-stone-100 text-muted"}`}>
               {resident.active ? "Status: Active" : "Status: Inactive"}
             </span>
             <Link
@@ -102,7 +102,7 @@ export default async function ResidentDetailPage({
       </section>
 
       <div className="grid min-w-0 gap-5 lg:grid-cols-12">
-        <section className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm lg:col-span-5">
+        <section className="surface-card p-5 lg:col-span-5">
           <p className="text-xs font-bold uppercase tracking-[0.16em] text-brand">Resident information</p>
           <dl className="mt-5 grid grid-cols-2 gap-x-4 gap-y-5">
             <Info label="Age" value={resident.age?.toString() || "Not provided"} />
@@ -115,13 +115,13 @@ export default async function ResidentDetailPage({
           </dl>
         </section>
 
-        <section className="rounded-2xl bg-stone-900 p-5 text-white shadow-sm lg:col-span-7">
+        <section className="surface-dark p-5 lg:col-span-7">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <p className="text-xs font-bold uppercase tracking-[0.16em] text-yellow-300">Monthly billing</p>
+              <p className="text-xs font-bold uppercase tracking-[0.16em] text-accent">Monthly billing</p>
               <h2 className="mt-1 text-xl font-bold">{formatMonth(monthToDate(month))}</h2>
             </div>
-            <ResidentMonthPicker month={month} />
+            <MonthNavigator month={month} tone="dark" dropParams={["paid"]} />
           </div>
 
           <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -129,41 +129,41 @@ export default async function ResidentDetailPage({
             <BillingMetric label="Paid" value={formatTaka(paidThisMonth)} />
             <div className="col-span-2 sm:col-span-1"><BillingMetric label="Remaining" value={formatTaka(due)} emphasis /></div>
           </div>
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-stone-700 pt-4">
-            <span className={`rounded-full px-3 py-1.5 text-xs font-bold ${status === "Paid" ? "bg-green-300 text-green-950" : status === "Partial" ? "bg-yellow-300 text-stone-950" : status === "Unpaid" ? "bg-red-200 text-red-950" : "bg-stone-700 text-stone-100"}`}>
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-4">
+            <span className={`rounded-full px-3 py-1.5 text-xs font-bold ${status === "Paid" ? "bg-green-200 text-green-950" : status === "Partial" ? "bg-accent text-charcoal" : status === "Unpaid" ? "bg-red-200 text-red-950" : "bg-white/15 text-white"}`}>
               Payment status: {status}
             </span>
             {latestMonthPayment && (
-              <Link href={`/dashboard/receipt/${latestMonthPayment.id}`} className="inline-flex min-h-11 items-center justify-center rounded-xl border border-stone-600 px-4 py-2 text-sm font-semibold text-white hover:bg-stone-800 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-yellow-300/30">
+              <Link href={`/dashboard/receipt/${latestMonthPayment.id}`} className="btn-on-dark">
                 Print monthly receipt
               </Link>
             )}
           </div>
         </section>
 
-        <section className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm lg:col-span-5">
+        <section className="surface-card p-5 lg:col-span-5">
           <p className="text-xs font-bold uppercase tracking-[0.16em] text-brand">Payment action</p>
-          <h2 className="mb-5 mt-1 text-xl font-bold text-stone-900">Record a payment</h2>
+          <h2 className="mb-5 mt-1 text-xl font-bold text-charcoal">Record a payment</h2>
           <PaymentForm key={month} residentId={resident.id} month={month} due={due} />
         </section>
 
-        <section className="min-w-0 rounded-2xl border border-stone-200 bg-white p-5 shadow-sm lg:col-span-7">
+        <section className="min-w-0 surface-card p-5 lg:col-span-7">
           <div className="flex items-center justify-between gap-3">
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.16em] text-brand">Selected month</p>
-              <h2 className="mt-1 text-xl font-bold text-stone-900">Transactions</h2>
+              <h2 className="mt-1 text-xl font-bold text-charcoal">Transactions</h2>
             </div>
-            <span className="rounded-full bg-stone-100 px-3 py-1 text-xs font-semibold text-stone-700">{monthPayments.length} recorded</span>
+            <span className="rounded-full bg-brand-light px-3 py-1 text-xs font-semibold text-brand-dark">{monthPayments.length} recorded</span>
           </div>
           {monthPayments.length === 0 ? (
-            <p className="mt-8 rounded-xl bg-stone-50 px-4 py-8 text-center text-sm text-stone-500">No payments recorded for this month.</p>
+            <p className="mt-8 rounded-xl bg-stone-50 px-4 py-8 text-center text-sm text-muted">No payments recorded for this month.</p>
           ) : (
-            <ul className="mt-5 divide-y divide-stone-100">
+            <ul className="mt-5 divide-y divide-line/70">
               {monthPayments.map((payment) => (
                 <li key={payment.id} className="flex flex-col gap-3 py-4 first:pt-0 sm:flex-row sm:items-center sm:justify-between">
                   <div className="min-w-0">
-                    <p className="font-bold text-stone-900">{formatTaka(Number(payment.amount))}</p>
-                    <p className="break-words text-xs text-stone-500">{new Date(payment.paid_at).toLocaleDateString()} · {payment.method || "Method not specified"}</p>
+                    <p className="font-bold text-charcoal">{formatTaka(Number(payment.amount))}</p>
+                    <p className="break-words text-xs text-muted">{new Date(payment.paid_at).toLocaleDateString()} · {payment.method || "Method not specified"}</p>
                   </div>
                   <DeletePaymentButton paymentId={payment.id} residentId={resident.id} />
                 </li>
@@ -173,39 +173,39 @@ export default async function ResidentDetailPage({
         </section>
       </div>
 
-      <section className="min-w-0 overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm">
-        <div className="border-b border-stone-200 px-5 py-4">
+      <section className="min-w-0 surface-card overflow-hidden">
+        <div className="border-b border-line px-5 py-4">
           <p className="text-xs font-bold uppercase tracking-[0.16em] text-brand">All transactions</p>
-          <h2 className="mt-1 text-xl font-bold text-stone-900">Payment history</h2>
+          <h2 className="mt-1 text-xl font-bold text-charcoal">Payment history</h2>
         </div>
         {payments.length === 0 ? (
-          <p className="px-5 py-10 text-center text-sm text-stone-500">No payments recorded yet.</p>
+          <p className="px-5 py-10 text-center text-sm text-muted">No payments recorded yet.</p>
         ) : (
           <>
             <div className="hidden overflow-x-auto md:block">
               <table className="w-full min-w-[680px] text-left text-sm">
-                <thead className="bg-stone-50 text-xs uppercase tracking-wide text-stone-500">
+                <thead className="bg-stone-50 text-xs uppercase tracking-wide text-muted">
                   <tr><th className="px-5 py-3 font-semibold">Month</th><th className="px-5 py-3 font-semibold">Amount</th><th className="px-5 py-3 font-semibold">Date</th><th className="px-5 py-3 font-semibold">Method</th><th className="px-5 py-3 font-semibold">Receipt</th></tr>
                 </thead>
-                <tbody className="divide-y divide-stone-100">
+                <tbody className="divide-y divide-line/70">
                   {payments.map((payment) => (
-                    <tr key={payment.id}>
-                      <td className="px-5 py-3 font-medium text-stone-900">{formatMonth(payment.period_month)}</td>
-                      <td className="px-5 py-3">{formatTaka(Number(payment.amount))}</td>
-                      <td className="px-5 py-3">{new Date(payment.paid_at).toLocaleDateString()}</td>
-                      <td className="px-5 py-3">{payment.method || "—"}</td>
-                      <td className="px-5 py-3">{latestPaymentIdByMonth.get(payment.period_month) === payment.id ? <ReceiptLink id={payment.id} /> : <span className="text-stone-300">—</span>}</td>
+                    <tr key={payment.id} className="transition-colors hover:bg-brand-light/40">
+                      <td className="px-5 py-3 font-medium text-charcoal">{formatMonth(payment.period_month)}</td>
+                      <td className="px-5 py-3 text-charcoal">{formatTaka(Number(payment.amount))}</td>
+                      <td className="px-5 py-3 text-muted">{new Date(payment.paid_at).toLocaleDateString()}</td>
+                      <td className="px-5 py-3 text-muted">{payment.method || "—"}</td>
+                      <td className="px-5 py-3">{latestPaymentIdByMonth.get(payment.period_month) === payment.id ? <ReceiptLink id={payment.id} /> : <span className="text-line">—</span>}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-            <ul className="divide-y divide-stone-100 md:hidden">
+            <ul className="divide-y divide-line/70 md:hidden">
               {payments.map((payment) => (
                 <li key={payment.id} className="space-y-3 p-4">
                   <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0"><p className="font-bold text-stone-900">{formatMonth(payment.period_month)}</p><p className="mt-1 text-xs text-stone-500">{new Date(payment.paid_at).toLocaleDateString()} · {payment.method || "Method not specified"}</p></div>
-                    <p className="shrink-0 font-bold text-stone-900">{formatTaka(Number(payment.amount))}</p>
+                    <div className="min-w-0"><p className="font-bold text-charcoal">{formatMonth(payment.period_month)}</p><p className="mt-1 text-xs text-muted">{new Date(payment.paid_at).toLocaleDateString()} · {payment.method || "Method not specified"}</p></div>
+                    <p className="shrink-0 font-bold text-charcoal">{formatTaka(Number(payment.amount))}</p>
                   </div>
                   {latestPaymentIdByMonth.get(payment.period_month) === payment.id && <ReceiptLink id={payment.id} />}
                 </li>
@@ -215,10 +215,10 @@ export default async function ResidentDetailPage({
         )}
       </section>
 
-      <section className="rounded-2xl border border-red-200 bg-red-50/60 p-5">
+      <section className="rounded-card border border-red-200 bg-red-50/60 p-5">
         <p className="text-xs font-bold uppercase tracking-[0.16em] text-red-700">Destructive controls</p>
-        <h2 className="mt-1 text-lg font-bold text-stone-900">Remove resident</h2>
-        <p className="mb-4 mt-1 text-sm text-stone-600">Payment history will be kept, but the resident will be removed from active views.</p>
+        <h2 className="mt-1 text-lg font-bold text-charcoal">Remove resident</h2>
+        <p className="mb-4 mt-1 text-sm text-muted">Payment history will be kept, but the resident will be removed from active views.</p>
         <DeleteResidentButton residentId={resident.id} residentName={resident.name} />
       </section>
     </div>
@@ -226,11 +226,11 @@ export default async function ResidentDetailPage({
 }
 
 function Info({ label, value }: { label: string; value: string }) {
-  return <div className="min-w-0"><dt className="text-xs font-medium text-stone-500">{label}</dt><dd className="mt-1 break-words text-sm font-semibold text-stone-900">{value}</dd></div>;
+  return <div className="min-w-0"><dt className="text-xs font-medium text-muted">{label}</dt><dd className="mt-1 break-words text-sm font-semibold text-charcoal">{value}</dd></div>;
 }
 
 function BillingMetric({ label, value, emphasis }: { label: string; value: string; emphasis?: boolean }) {
-  return <div className={`rounded-xl border p-3 ${emphasis ? "border-yellow-300/40 bg-yellow-300/10" : "border-stone-700 bg-stone-800"}`}><p className="text-xs text-stone-400">{label}</p><p className={`mt-1 break-words text-lg font-bold ${emphasis ? "text-yellow-300" : "text-white"}`}>{value}</p></div>;
+  return <div className={`rounded-xl border p-3 ${emphasis ? "border-accent/40 bg-accent/10" : "surface-dark-nested"}`}><p className={`text-xs ${emphasis ? "text-accent/90" : "text-white/60"}`}>{label}</p><p className={`mt-1 break-words text-lg font-bold ${emphasis ? "text-accent" : "text-white"}`}>{value}</p></div>;
 }
 
 function ReceiptLink({ id }: { id: string }) {

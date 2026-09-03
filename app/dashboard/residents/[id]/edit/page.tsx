@@ -24,10 +24,10 @@ export default async function EditResidentPage({ params }: { params: { id: strin
       <Link href={`/dashboard/residents/${resident.id}`} className="inline-flex min-h-11 items-center text-sm font-semibold text-brand hover:underline focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/20">
         ← Back to resident
       </Link>
-      <header className="rounded-3xl bg-stone-900 p-5 text-white sm:p-7">
-        <p className="text-xs font-bold uppercase tracking-[0.18em] text-yellow-300">Resident profile</p>
+      <header className="rounded-shell bg-charcoal p-5 text-white sm:p-7">
+        <p className="text-xs font-bold uppercase tracking-[0.18em] text-accent">Resident profile</p>
         <h1 className="mt-2 break-words text-3xl font-bold tracking-tight">Edit {resident.name}</h1>
-        <p className="mt-2 text-sm leading-6 text-stone-300">Update personal, education, accommodation, and billing information.</p>
+        <p className="mt-2 text-sm leading-6 text-white/70">Update personal, education, accommodation, and billing information.</p>
       </header>
       <ResidentForm action={updateResident} resident={resident} submitLabel="Save changes" cancelHref={`/dashboard/residents/${resident.id}`} />
     </div>

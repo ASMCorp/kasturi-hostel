@@ -20,7 +20,10 @@ const config: Config = {
         },
         page: "#f0f2e8",
         surface: "#faf9f3",
-        charcoal: "#20241f",
+        charcoal: {
+          DEFAULT: "#20241f",
+          light: "#2c312a",
+        },
         line: "#dfe3d7",
         muted: "#667064",
       },
