@@ -21,7 +21,8 @@ export default function DeletePaymentButton({ paymentId, residentId }: { payment
     >
       <input type="hidden" name="id" value={paymentId} />
       <input type="hidden" name="resident_id" value={residentId} />
-      <SubmitButton pendingLabel="Deleting…" className="min-h-11 rounded-lg px-2 text-xs font-semibold text-red-700 underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-red-200 disabled:cursor-not-allowed disabled:opacity-60">
+      <SubmitButton variant="none" size="none" pendingLabel="Deleting…" className="inline-flex min-h-11 items-center gap-1.5 rounded-lg px-2.5 text-xs font-semibold text-red-700 transition-colors hover:bg-red-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-red-200 disabled:cursor-not-allowed disabled:opacity-60">
+        <span aria-hidden="true">✕</span>
         Delete payment
       </SubmitButton>
       {state.error && <p role="alert" className="mt-1 max-w-52 text-xs font-medium text-red-700">{state.error}</p>}
