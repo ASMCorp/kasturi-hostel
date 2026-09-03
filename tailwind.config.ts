@@ -46,6 +46,16 @@ const config: Config = {
         card: "0 12px 36px -28px rgba(32, 36, 31, 0.45)",
         shell: "0 30px 80px -45px rgba(32, 36, 31, 0.45)",
       },
+      keyframes: {
+        fadeIn: {
+          from: { opacity: "0" },
+          to: { opacity: "1" },
+        },
+        popIn: {
+          from: { opacity: "0", transform: "translateY(8px) scale(0.97)" },
+          to: { opacity: "1", transform: "translateY(0) scale(1)" },
+        },
+      },
     },
   },
   plugins: [],
