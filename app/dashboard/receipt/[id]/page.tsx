@@ -1,211 +1,141 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getSupabaseAdmin } from "@/lib/supabase";
-import { Resident, Payment, formatTaka, formatMonth } from "@/lib/types";
+import { type Resident, type Payment, formatTaka, formatMonth } from "@/lib/types";
 import PrintButton from "@/components/PrintButton";
 
 export const dynamic = "force-dynamic";
 
-export default async function ReceiptPage({
-  params,
-}: {
-  params: { id: string };
-}) {
+export default async function ReceiptPage({ params }: { params: { id: string } }) {
   const sb = getSupabaseAdmin();
-  const { data: pData } = await sb
-    .from("payments")
-    .select("*")
-    .eq("id", params.id)
-    .single();
-  if (!pData) notFound();
-  const payment = pData as Payment;
+  const paymentResult = await sb.from("payments").select("*").eq("id", params.id).single();
 
-  const { data: rData } = await sb
-    .from("residents")
-    .select("*")
-    .eq("id", payment.resident_id)
-    .single();
-  if (!rData) notFound();
-  const resident = rData as Resident;
+  if (paymentResult.error) {
+    if (paymentResult.error.code === "PGRST116") notFound();
+    throw new Error("Unable to load this receipt right now.");
+  }
+  if (!paymentResult.data) notFound();
+  const payment = paymentResult.data as Payment;
 
-  // All payments for that billing month, oldest first.
-  const { data: monthPays } = await sb
-    .from("payments")
-    .select("*")
-    .eq("resident_id", resident.id)
-    .eq("period_month", payment.period_month)
-    .order("paid_at", { ascending: true });
+  const [residentResult, monthPaymentsResult] = await Promise.all([
+    sb.from("residents").select("*").eq("id", payment.resident_id).single(),
+    sb
+      .from("payments")
+      .select("*")
+      .eq("resident_id", payment.resident_id)
+      .eq("period_month", payment.period_month)
+      .order("paid_at", { ascending: true }),
+  ]);
 
-  const all = (monthPays as Payment[] | null) || [];
+  if (residentResult.error) {
+    if (residentResult.error.code === "PGRST116") notFound();
+    throw new Error("Unable to load the resident for this receipt.");
+  }
+  if (!residentResult.data) notFound();
+  if (monthPaymentsResult.error) throw new Error("Unable to load the receipt transactions.");
 
-  // Show every transaction made up to and including the one being printed.
+  const resident = residentResult.data as Resident;
+  const all = (monthPaymentsResult.data as Payment[] | null) || [];
   const cutoff = new Date(payment.paid_at).getTime();
-  const shown = all.filter(
-    (p) => new Date(p.paid_at).getTime() <= cutoff || p.id === payment.id
-  );
-
-  const paidSoFar = shown.reduce((s, p) => s + Number(p.amount), 0);
+  const shown = all.filter((item) => new Date(item.paid_at).getTime() <= cutoff || item.id === payment.id);
+  const paidSoFar = shown.reduce((sum, item) => sum + Number(item.amount), 0);
   const fee = Number(resident.monthly_fee);
   const remaining = Math.max(fee - paidSoFar, 0);
   const isPaid = fee > 0 && paidSoFar >= fee;
 
   return (
-    <div>
-      <div className="no-print flex items-center justify-between mb-4">
-        <Link
-          href={`/dashboard/residents/${resident.id}`}
-          className="text-sm text-brand hover:underline"
-        >
+    <div className="min-w-0">
+      <div className="no-print mb-5 flex flex-col gap-3 min-[380px]:flex-row min-[380px]:items-center min-[380px]:justify-between">
+        <Link href={`/dashboard/residents/${resident.id}`} className="inline-flex min-h-11 items-center text-sm font-semibold text-brand hover:underline focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/20">
           ← Back to resident
         </Link>
         <PrintButton />
       </div>
 
-      <div className="print-area mx-auto max-w-2xl bg-white rounded-xl border border-gray-200 shadow-sm p-8">
-        {/* Header */}
-        <div className="flex items-center justify-between border-b-2 border-brand pb-4 mb-6">
-          <div className="flex items-center gap-3">
-            <span className="h-12 w-12 rounded-full bg-brand text-white flex items-center justify-center text-xl font-bold">
-              K
+      <article className="print-area mx-auto max-w-3xl overflow-hidden rounded-3xl border border-stone-200 bg-white shadow-sm">
+        <header className="bg-stone-900 p-5 text-white sm:p-8">
+          <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
+            <div className="flex min-w-0 items-center gap-3">
+              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-yellow-300 text-xl font-black text-stone-950">K</span>
+              <div className="min-w-0">
+                <h1 className="break-words text-lg font-bold sm:text-xl">Kasturi Girls Hostel</h1>
+                <p className="text-xs text-stone-300">Payment confirmation receipt</p>
+              </div>
+            </div>
+            <div className="min-w-0 text-left text-sm sm:text-right">
+              <p className="break-all font-semibold">Receipt #{payment.receipt_no}</p>
+              <p className="mt-1 text-xs text-stone-300">{new Date(payment.paid_at).toLocaleString()}</p>
+            </div>
+          </div>
+        </header>
+
+        <div className="p-4 sm:p-8">
+          <section className="grid gap-3 rounded-2xl bg-stone-50 p-4 sm:grid-cols-3">
+            <Line label="Resident" value={resident.name} />
+            <Line label="Room" value={resident.room_number || "Not assigned"} />
+            <Line label="Billing month" value={formatMonth(payment.period_month)} />
+          </section>
+
+          <div className="my-5">
+            <span className={`inline-flex rounded-full px-3 py-1.5 text-sm font-bold ${isPaid ? "bg-green-100 text-green-900" : "bg-yellow-200 text-stone-950"}`}>
+              Payment status: {isPaid ? "Paid in full" : "Partially paid"}
             </span>
-            <div>
-              <div className="text-xl font-bold text-brand-dark">
-                Kasturi Girls Hostel
-              </div>
-              <div className="text-xs text-gray-500">
-                Payment Confirmation Receipt
-              </div>
-            </div>
           </div>
-          <div className="text-right text-sm">
-            <div className="font-semibold">Receipt #{payment.receipt_no}</div>
-            <div className="text-gray-500">
-              {new Date(payment.paid_at).toLocaleString()}
+
+          <section aria-labelledby="receipt-transactions-title">
+            <h2 id="receipt-transactions-title" className="mb-3 text-xs font-bold uppercase tracking-[0.16em] text-brand">Transactions included</h2>
+            <div className="hidden overflow-hidden rounded-xl border border-stone-200 sm:block print:block">
+              <table className="w-full text-sm">
+                <thead className="bg-stone-50 text-left text-xs uppercase tracking-wide text-stone-500">
+                  <tr><th className="px-4 py-3 font-semibold">#</th><th className="px-4 py-3 font-semibold">Payment time</th><th className="px-4 py-3 font-semibold">Method</th><th className="px-4 py-3 text-right font-semibold">Amount</th></tr>
+                </thead>
+                <tbody className="divide-y divide-stone-100">
+                  {shown.map((item, index) => (
+                    <tr key={item.id} className={item.id === payment.id ? "bg-yellow-50" : ""}>
+                      <td className="px-4 py-3">{index + 1}</td>
+                      <td className="px-4 py-3">{new Date(item.paid_at).toLocaleString()}</td>
+                      <td className="px-4 py-3">{item.method || "—"}</td>
+                      <td className="px-4 py-3 text-right font-semibold">{formatTaka(Number(item.amount))}</td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot><tr className="border-t-2 border-stone-200 bg-stone-50"><td className="px-4 py-3 font-bold" colSpan={3}>Total paid</td><td className="px-4 py-3 text-right font-bold">{formatTaka(paidSoFar)}</td></tr></tfoot>
+              </table>
             </div>
-          </div>
-        </div>
 
-        {/* Resident — name, room, month only */}
-        <div className="grid grid-cols-3 gap-x-6 text-sm mb-6">
-          <Line k="Name" v={resident.name} />
-          <Line k="Room" v={resident.room_number || "—"} />
-          <Line k="Month" v={formatMonth(payment.period_month)} />
-        </div>
-
-        {/* Status */}
-        <div className="mb-6">
-          <span
-            className={`inline-block rounded-full px-3 py-1 text-sm font-semibold ${
-              isPaid
-                ? "bg-brand-light text-brand-dark"
-                : "bg-accent-light text-accent-dark"
-            }`}
-          >
-            {isPaid ? "Paid ✓" : "Partial payment"}
-          </span>
-        </div>
-
-        {/* All transactions for this month up to this receipt */}
-        <div className="border border-gray-200 rounded-lg overflow-hidden mb-6">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 text-gray-500 text-left">
-              <tr>
-                <th className="px-4 py-2 font-medium">#</th>
-                <th className="px-4 py-2 font-medium">Payment time</th>
-                <th className="px-4 py-2 font-medium">Method</th>
-                <th className="px-4 py-2 font-medium text-right">Amount</th>
-              </tr>
-            </thead>
-            <tbody>
-              {shown.map((p, i) => (
-                <tr
-                  key={p.id}
-                  className={`border-t border-gray-100 ${
-                    p.id === payment.id ? "bg-accent-light/40" : ""
-                  }`}
-                >
-                  <td className="px-4 py-2.5">{i + 1}</td>
-                  <td className="px-4 py-2.5">
-                    {new Date(p.paid_at).toLocaleString()}
-                  </td>
-                  <td className="px-4 py-2.5">{p.method || "—"}</td>
-                  <td className="px-4 py-2.5 text-right font-medium">
-                    {formatTaka(Number(p.amount))}
-                  </td>
-                </tr>
+            <ul className="space-y-3 sm:hidden print:hidden">
+              {shown.map((item, index) => (
+                <li key={item.id} className={`rounded-xl border p-3 ${item.id === payment.id ? "border-yellow-300 bg-yellow-50" : "border-stone-200"}`}>
+                  <div className="flex items-start justify-between gap-3"><p className="text-xs font-semibold text-stone-500">Payment {index + 1}</p><p className="shrink-0 font-bold text-stone-900">{formatTaka(Number(item.amount))}</p></div>
+                  <p className="mt-2 text-sm text-stone-700">{new Date(item.paid_at).toLocaleString()}</p>
+                  <p className="mt-1 text-xs text-stone-500">Method: {item.method || "Not specified"}</p>
+                </li>
               ))}
-            </tbody>
-            <tfoot>
-              <tr className="border-t-2 border-gray-200 bg-gray-50">
-                <td className="px-4 py-2.5 font-semibold" colSpan={3}>
-                  Total paid
-                </td>
-                <td className="px-4 py-2.5 text-right font-bold text-brand-dark">
-                  {formatTaka(paidSoFar)}
-                </td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
+            </ul>
+          </section>
 
-        {/* Summary */}
-        <div className="border border-gray-200 rounded-lg divide-y divide-gray-100 text-sm mb-8">
-          <Stat k="Monthly fee" v={formatTaka(fee)} />
-          <Stat k="Total paid" v={formatTaka(paidSoFar)} />
-          <Stat
-            k="Remaining balance"
-            v={remaining > 0 ? formatTaka(remaining) : "Fully paid ✓"}
-            highlight={remaining > 0}
-          />
-        </div>
+          <section className="mt-6 divide-y divide-stone-100 rounded-xl border border-stone-200 text-sm">
+            <Stat label="Monthly fee" value={formatTaka(fee)} />
+            <Stat label="Total paid" value={formatTaka(paidSoFar)} />
+            <Stat label="Remaining balance" value={remaining > 0 ? formatTaka(remaining) : "Fully paid"} highlight={remaining > 0} />
+          </section>
 
-        {/* Signatures */}
-        <div className="flex justify-between text-sm text-gray-500 pt-8">
-          <div className="text-center">
-            <div className="border-t border-gray-400 w-40 pt-1">
-              Received by
-            </div>
-          </div>
-          <div className="text-center">
-            <div className="border-t border-gray-400 w-40 pt-1">
-              Authorized signature
-            </div>
-          </div>
-        </div>
+          <section className="mt-16 grid grid-cols-2 gap-5 text-center text-xs text-stone-500 sm:gap-16 sm:text-sm">
+            <div className="min-w-0 border-t border-stone-400 pt-2">Received by</div>
+            <div className="min-w-0 border-t border-stone-400 pt-2">Authorized signature</div>
+          </section>
 
-        <p className="text-center text-xs text-gray-400 mt-8">
-          This is a computer-generated receipt from Kasturi Girls Hostel
-          Management System.
-        </p>
-      </div>
+          <p className="mt-10 text-center text-xs leading-5 text-stone-400">This is a computer-generated receipt from Kasturi Girls Hostel Management System.</p>
+        </div>
+      </article>
     </div>
   );
 }
 
-function Line({ k, v }: { k: string; v: string }) {
-  return (
-    <div>
-      <div className="text-xs text-gray-500">{k}</div>
-      <div className="font-medium">{v}</div>
-    </div>
-  );
+function Line({ label, value }: { label: string; value: string }) {
+  return <div className="min-w-0"><p className="text-xs font-medium text-stone-500">{label}</p><p className="mt-1 break-words text-sm font-semibold text-stone-900">{value}</p></div>;
 }
 
-function Stat({
-  k,
-  v,
-  highlight,
-}: {
-  k: string;
-  v: string;
-  highlight?: boolean;
-}) {
-  return (
-    <div className="flex justify-between px-4 py-2.5">
-      <span className="text-gray-600">{k}</span>
-      <span className={highlight ? "font-semibold text-accent-dark" : "font-medium"}>
-        {v}
-      </span>
-    </div>
-  );
+function Stat({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
+  return <div className="flex items-center justify-between gap-3 px-4 py-3"><span className="text-stone-600">{label}</span><span className={`break-words text-right font-semibold ${highlight ? "text-red-700" : "text-stone-900"}`}>{value}</span></div>;
 }

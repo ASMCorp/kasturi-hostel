@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import {
   Resident,
@@ -8,180 +7,151 @@ import {
   formatTaka,
   formatMonth,
 } from "@/lib/types";
+import DashboardMonthPicker from "@/components/DashboardMonthPicker";
+import ResidentDirectory, {
+  ResidentDirectoryRow,
+} from "@/components/ResidentDirectory";
+import MetricCard from "@/components/ui/MetricCard";
 
 export const dynamic = "force-dynamic";
-
-type Row = Resident & { paid: number };
 
 export default async function DashboardPage({
   searchParams,
 }: {
   searchParams: { month?: string; q?: string };
 }) {
-  const month = searchParams.month || currentMonth();
-  const q = (searchParams.q || "").trim().toLowerCase();
+  const month = /^[1-9]\d{3}-(0[1-9]|1[0-2])$/.test(searchParams.month || "")
+    ? searchParams.month!
+    : currentMonth();
+  const initialQuery = searchParams.q || "";
   const sb = getSupabaseAdmin();
 
-  const { data: residents } = await sb
-    .from("residents")
-    .select("*")
-    .is("deleted_at", null)
-    .order("active", { ascending: false })
-    .order("name", { ascending: true });
+  const [residentsResult, paymentsResult] = await Promise.all([
+    sb
+      .from("residents")
+      .select("*")
+      .is("deleted_at", null)
+      .order("active", { ascending: false })
+      .order("name", { ascending: true }),
+    sb
+      .from("payments")
+      .select("resident_id, amount")
+      .eq("period_month", monthToDate(month)),
+  ]);
 
-  const { data: payments } = await sb
-    .from("payments")
-    .select("resident_id, amount")
-    .eq("period_month", monthToDate(month));
+  if (residentsResult.error) {
+    throw new Error(`Unable to load residents: ${residentsResult.error.message}`);
+  }
+  if (paymentsResult.error) {
+    throw new Error(`Unable to load payments: ${paymentsResult.error.message}`);
+  }
 
   const paidMap = new Map<string, number>();
-  (payments as Pick<Payment, "resident_id" | "amount">[] | null)?.forEach((p) => {
-    paidMap.set(p.resident_id, (paidMap.get(p.resident_id) || 0) + Number(p.amount));
+  (
+    paymentsResult.data as Pick<Payment, "resident_id" | "amount">[] | null
+  )?.forEach((payment) => {
+    paidMap.set(
+      payment.resident_id,
+      (paidMap.get(payment.resident_id) || 0) + Number(payment.amount),
+    );
   });
 
-  let rows: Row[] = (residents as Resident[] | null || []).map((r) => ({
-    ...r,
-    paid: paidMap.get(r.id) || 0,
+  const rows: ResidentDirectoryRow[] = (
+    (residentsResult.data as Resident[] | null) || []
+  ).map((resident) => ({
+    ...resident,
+    paid: paidMap.get(resident.id) || 0,
   }));
 
-  if (q) {
-    rows = rows.filter(
-      (r) =>
-        r.name.toLowerCase().includes(q) ||
-        (r.room_number || "").toLowerCase().includes(q) ||
-        (r.phone || "").toLowerCase().includes(q)
-    );
-  }
-
-  const totalDue = rows.reduce((s, r) => s + Number(r.monthly_fee), 0);
-  const totalPaid = rows.reduce((s, r) => s + r.paid, 0);
-  const fullyPaid = rows.filter((r) => r.paid >= Number(r.monthly_fee) && Number(r.monthly_fee) > 0).length;
-
-  function statusOf(r: Row) {
-    const fee = Number(r.monthly_fee);
-    if (fee <= 0) return { label: "No fee set", cls: "bg-gray-100 text-gray-500" };
-    if (r.paid <= 0) return { label: "Unpaid", cls: "bg-red-100 text-red-700" };
-    if (r.paid < fee) return { label: "Partial", cls: "bg-amber-100 text-amber-700" };
-    return { label: "Paid", cls: "bg-green-100 text-green-700" };
-  }
+  const totalExpected = rows.reduce(
+    (sum, resident) => sum + Number(resident.monthly_fee),
+    0,
+  );
+  const totalCollected = rows.reduce(
+    (sum, resident) => sum + resident.paid,
+    0,
+  );
+  const fullyPaid = rows.filter((resident) => {
+    const fee = Number(resident.monthly_fee);
+    return fee > 0 && resident.paid >= fee;
+  }).length;
+  const outstanding = Math.max(totalExpected - totalCollected, 0);
+  const collectionPercentage =
+    totalExpected > 0 ? (totalCollected / totalExpected) * 100 : 0;
+  const roundedPercentage = Math.round(collectionPercentage);
+  const progressWidth = Math.min(Math.max(collectionPercentage, 0), 100);
 
   return (
-    <div>
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
+    <div className="space-y-6 sm:space-y-8">
+      <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-brand-dark">Residents</h1>
-          <p className="text-sm text-gray-500">
+          <p className="text-xs font-bold uppercase tracking-[0.16em] text-brand">
+            Hostel overview
+          </p>
+          <h1 className="mt-2 text-3xl font-extrabold tracking-tight text-charcoal sm:text-4xl">
+            Residents
+          </h1>
+          <p className="mt-2 text-sm text-muted sm:text-base">
             Payment status for {formatMonth(monthToDate(month))}
           </p>
         </div>
-        <Link
-          href="/dashboard/residents/new"
-          className="rounded-lg bg-brand text-white px-4 py-2 text-sm font-medium hover:bg-brand-dark"
+        <DashboardMonthPicker month={month} />
+      </div>
+
+      <section aria-label="Monthly payment summary" className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <MetricCard
+          label="Collected"
+          value={formatTaka(totalCollected)}
+          detail={`${roundedPercentage}% of expected fees`}
+          variant="dark"
+          className="sm:col-span-2 lg:row-span-2"
+          valueClassName="text-4xl sm:text-5xl lg:mt-6 lg:text-6xl"
         >
-          + Add resident
-        </Link>
-      </div>
+          <div className="mt-7 lg:mt-12">
+            <div className="mb-2 flex items-center justify-between gap-3 text-xs font-semibold text-white/70">
+              <span>Collection progress</span>
+              <span>{roundedPercentage}%</span>
+            </div>
+            <div
+              className="h-2 overflow-hidden rounded-full bg-white/15"
+              role="progressbar"
+              aria-label="Monthly collection progress"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={Math.min(Math.max(roundedPercentage, 0), 100)}
+            >
+              <div
+                className="h-full rounded-full bg-accent"
+                style={{ width: `${progressWidth}%` }}
+              />
+            </div>
+          </div>
+        </MetricCard>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
-        <Stat label="Residents" value={String(rows.length)} />
-        <Stat label="Fully paid" value={`${fullyPaid}/${rows.length}`} />
-        <Stat label="Collected" value={formatTaka(totalPaid)} />
-        <Stat label="Expected" value={formatTaka(totalDue)} />
-      </div>
-
-      <form className="flex flex-wrap gap-2 mb-4" action="/dashboard">
-        <input
-          type="month"
-          name="month"
-          defaultValue={month}
-          className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
+        <MetricCard
+          label="Residents"
+          value={String(rows.length)}
+          detail="Total resident records"
         />
-        <input
-          type="text"
-          name="q"
-          defaultValue={searchParams.q || ""}
-          placeholder="Search name, room, phone"
-          className="flex-1 min-w-[180px] rounded-lg border border-gray-300 px-3 py-2 text-sm"
+        <MetricCard
+          label="Fully paid"
+          value={`${fullyPaid}/${rows.length}`}
+          detail="Residents settled this month"
+          variant="accent"
         />
-        <button className="rounded-lg bg-gray-800 text-white px-4 py-2 text-sm">
-          Apply
-        </button>
-      </form>
+        <MetricCard
+          label="Expected"
+          value={formatTaka(totalExpected)}
+          detail="Total monthly fees"
+        />
+        <MetricCard
+          label="Outstanding"
+          value={formatTaka(outstanding)}
+          detail={outstanding > 0 ? "Still to collect" : "Nothing outstanding"}
+        />
+      </section>
 
-      <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-50 text-gray-500 text-left">
-            <tr>
-              <th className="px-4 py-3 font-medium">Name</th>
-              <th className="px-4 py-3 font-medium">Room</th>
-              <th className="px-4 py-3 font-medium">Fee</th>
-              <th className="px-4 py-3 font-medium">Paid</th>
-              <th className="px-4 py-3 font-medium">Status</th>
-              <th className="px-4 py-3"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.length === 0 && (
-              <tr>
-                <td colSpan={6} className="px-4 py-10 text-center text-gray-400">
-                  No residents yet. Add the first one.
-                </td>
-              </tr>
-            )}
-            {rows.map((r) => {
-              const st = statusOf(r);
-              return (
-                <tr key={r.id} className="border-t border-gray-50 hover:bg-brand-light/40">
-                  <td className="px-4 py-3">
-                    <Link
-                      href={`/dashboard/residents/${r.id}`}
-                      className="font-medium text-brand-dark hover:underline"
-                    >
-                      {r.name}
-                    </Link>
-                    {!r.active && (
-                      <span className="ml-2 text-xs text-gray-400">(inactive)</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3">{r.room_number || "—"}</td>
-                  <td className="px-4 py-3">{formatTaka(Number(r.monthly_fee))}</td>
-                  <td className="px-4 py-3">
-                    {formatTaka(r.paid)}
-                    {r.paid > 0 && r.paid < Number(r.monthly_fee) && (
-                      <span className="text-xs text-amber-600">
-                        {" "}
-                        (due {formatTaka(Number(r.monthly_fee) - r.paid)})
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${st.cls}`}>
-                      {st.label}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <Link
-                      href={`/dashboard/residents/${r.id}`}
-                      className="text-brand text-sm hover:underline"
-                    >
-                      Manage →
-                    </Link>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-}
-
-function Stat({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="bg-white rounded-xl border border-gray-100 p-4">
-      <div className="text-xs text-gray-500">{label}</div>
-      <div className="text-lg font-bold text-brand-dark">{value}</div>
+      <ResidentDirectory rows={rows} initialQuery={initialQuery} />
     </div>
   );
 }

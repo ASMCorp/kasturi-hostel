@@ -1,16 +1,18 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getSupabaseAdmin } from "@/lib/supabase";
-import { recordPayment, deletePayment } from "@/app/actions";
 import {
-  Resident,
-  Payment,
+  type Resident,
+  type Payment,
   currentMonth,
   monthToDate,
   formatTaka,
   formatMonth,
 } from "@/lib/types";
 import DeleteResidentButton from "@/components/DeleteResidentButton";
+import DeletePaymentButton from "@/components/DeletePaymentButton";
+import PaymentForm from "@/components/PaymentForm";
+import ResidentMonthPicker from "@/components/ResidentMonthPicker";
 
 export const dynamic = "force-dynamic";
 
@@ -21,305 +23,216 @@ export default async function ResidentDetailPage({
   params: { id: string };
   searchParams: { month?: string; paid?: string };
 }) {
-  const month = searchParams.month || currentMonth();
+  const month = /^[1-9]\d{3}-(0[1-9]|1[0-2])$/.test(searchParams.month || "")
+    ? searchParams.month!
+    : currentMonth();
   const paidJustNow = searchParams.paid === "1";
   const sb = getSupabaseAdmin();
 
-  const { data: rData } = await sb
-    .from("residents")
-    .select("*")
-    .eq("id", params.id)
-    .single();
-  if (!rData) notFound();
-  const resident = rData as Resident;
+  const [residentResult, paymentsResult] = await Promise.all([
+    sb.from("residents").select("*").eq("id", params.id).single(),
+    sb
+      .from("payments")
+      .select("*")
+      .eq("resident_id", params.id)
+      .order("period_month", { ascending: false })
+      .order("paid_at", { ascending: false }),
+  ]);
+
+  if (residentResult.error) {
+    if (residentResult.error.code === "PGRST116") notFound();
+    throw new Error("Unable to load this resident right now.");
+  }
+  if (!residentResult.data) notFound();
+  if (paymentsResult.error) throw new Error("Unable to load payment history right now.");
+
+  const resident = residentResult.data as Resident;
   if (resident.deleted_at) notFound();
-
-  const { data: allPayments } = await sb
-    .from("payments")
-    .select("*")
-    .eq("resident_id", resident.id)
-    .order("period_month", { ascending: false })
-    .order("paid_at", { ascending: false });
-
-  const payments = (allPayments as Payment[] | null) || [];
-  const monthPayments = payments.filter(
-    (p) => p.period_month === monthToDate(month)
-  );
-  const paidThisMonth = monthPayments.reduce((s, p) => s + Number(p.amount), 0);
+  const payments = (paymentsResult.data as Payment[] | null) || [];
+  const monthPayments = payments.filter((payment) => payment.period_month === monthToDate(month));
+  const paidThisMonth = monthPayments.reduce((sum, payment) => sum + Number(payment.amount), 0);
   const fee = Number(resident.monthly_fee);
   const due = Math.max(fee - paidThisMonth, 0);
-  const status =
-    fee <= 0
-      ? "No fee set"
-      : paidThisMonth <= 0
-      ? "Unpaid"
-      : paidThisMonth < fee
-      ? "Partial"
-      : "Paid";
-
-  // Latest payment for this month — used for a single receipt button
-  // (the receipt already lists every payment up to and including it).
+  const status = fee <= 0 ? "No fee set" : paidThisMonth <= 0 ? "Unpaid" : paidThisMonth < fee ? "Partial" : "Paid";
   const latestMonthPayment = monthPayments[0];
 
-  // One receipt per month for the history table: the latest payment of each
-  // month (payments are ordered month desc, paid_at desc, so the first row
-  // seen for a month is its latest payment).
   const latestPaymentIdByMonth = new Map<string, string>();
-  for (const p of payments) {
-    if (!latestPaymentIdByMonth.has(p.period_month)) {
-      latestPaymentIdByMonth.set(p.period_month, p.id);
+  for (const payment of payments) {
+    if (!latestPaymentIdByMonth.has(payment.period_month)) {
+      latestPaymentIdByMonth.set(payment.period_month, payment.id);
     }
   }
 
   return (
-    <div>
-      <Link href="/dashboard" className="text-sm text-brand hover:underline">
+    <div className="min-w-0 space-y-5">
+      <Link
+        href="/dashboard"
+        className="inline-flex min-h-11 items-center text-sm font-semibold text-brand hover:underline focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/20"
+      >
         ← All residents
       </Link>
 
       {paidJustNow && (
-        <div className="mt-3 rounded-lg bg-brand-light border border-brand/30 text-brand-dark px-4 py-3 text-sm font-medium">
-          ✓ Payment successful
+        <div role="status" className="rounded-2xl border border-green-300 bg-green-50 px-4 py-3 text-sm font-semibold text-green-900">
+          Payment recorded successfully.
         </div>
       )}
 
-      <div className="flex flex-wrap items-start justify-between gap-3 mt-2 mb-5">
-        <div>
-          <h1 className="text-2xl font-bold text-brand-dark">{resident.name}</h1>
-          <p className="text-sm text-gray-500">
-            Room {resident.room_number || "—"} · {resident.class || "—"} ·{" "}
-            {resident.school || "—"}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Link
-            href={`/dashboard/residents/${resident.id}/edit`}
-            className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-50"
-          >
-            Edit info
-          </Link>
-          <DeleteResidentButton
-            residentId={resident.id}
-            residentName={resident.name}
-          />
-        </div>
-      </div>
-
-      <div className="grid sm:grid-cols-4 gap-3 mb-6 text-sm">
-        <Info label="Age" value={resident.age?.toString() || "—"} />
-        <Info label="Phone" value={resident.phone || "—"} />
-        <Info label="Monthly fee" value={formatTaka(fee)} />
-        <Info label="Status" value={resident.active ? "Active" : "Inactive"} />
-      </div>
-
-      {/* Month picker */}
-      <form className="flex items-end gap-2 mb-4" action={`/dashboard/residents/${resident.id}`}>
-        <div>
-          <label className="block text-xs text-gray-500 mb-1">Billing month</label>
-          <input
-            type="month"
-            name="month"
-            defaultValue={month}
-            className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
-          />
-        </div>
-        <button className="rounded-lg bg-gray-800 text-white px-4 py-2 text-sm">
-          View
-        </button>
-      </form>
-
-      {/* This month summary + record payment */}
-      <div className="grid md:grid-cols-2 gap-5 mb-6">
-        <div className="bg-white rounded-xl border border-gray-100 p-5">
-          <h2 className="font-semibold text-brand-dark mb-1">
-            {formatMonth(monthToDate(month))}
-          </h2>
-          <div className="flex items-center gap-2 mb-4">
-            <span
-              className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                status === "Paid"
-                  ? "bg-green-100 text-green-700"
-                  : status === "Partial"
-                  ? "bg-amber-100 text-amber-700"
-                  : status === "Unpaid"
-                  ? "bg-red-100 text-red-700"
-                  : "bg-gray-100 text-gray-500"
-              }`}
-            >
-              {status}
-            </span>
+      <section className="overflow-hidden rounded-3xl border border-white/80 bg-gradient-to-br from-brand-light via-white to-accent-light p-5 shadow-sm sm:p-7">
+        <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+          <div className="min-w-0">
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-brand">Resident profile</p>
+            <h1 className="mt-2 break-words text-3xl font-bold tracking-tight text-charcoal sm:text-4xl">{resident.name}</h1>
+            <p className="mt-2 text-sm leading-6 text-muted">
+              Room {resident.room_number || "not assigned"} · {resident.class || "Class not set"}
+            </p>
           </div>
-          <dl className="space-y-1 text-sm">
-            <Row k="Fee" v={formatTaka(fee)} />
-            <Row k="Paid" v={formatTaka(paidThisMonth)} />
-            <Row k="Remaining" v={formatTaka(due)} strong />
+          <div className="flex flex-wrap items-center gap-2">
+            <span className={`rounded-full border px-3 py-1.5 text-xs font-bold ${resident.active ? "border-green-300 bg-green-100 text-green-900" : "border-stone-300 bg-stone-100 text-stone-700"}`}>
+              {resident.active ? "Status: Active" : "Status: Inactive"}
+            </span>
+            <Link
+              href={`/dashboard/residents/${resident.id}/edit`}
+              className="btn-dark"
+            >
+              Edit information
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      <div className="grid min-w-0 gap-5 lg:grid-cols-12">
+        <section className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm lg:col-span-5">
+          <p className="text-xs font-bold uppercase tracking-[0.16em] text-brand">Resident information</p>
+          <dl className="mt-5 grid grid-cols-2 gap-x-4 gap-y-5">
+            <Info label="Age" value={resident.age?.toString() || "Not provided"} />
+            <Info label="Phone" value={resident.phone || "Not provided"} />
+            <Info label="Class" value={resident.class || "Not provided"} />
+            <Info label="Room" value={resident.room_number || "Not assigned"} />
+            <div className="col-span-2">
+              <Info label="School / Institution" value={resident.school || "Not provided"} />
+            </div>
           </dl>
+        </section>
 
-          {monthPayments.length > 0 && (
-            <div className="mt-4 border-t border-gray-100 pt-3">
-              <div className="text-xs text-gray-500 mb-2">Payments this month</div>
-              <ul className="space-y-1.5 text-sm">
-                {monthPayments.map((p) => (
-                  <li key={p.id} className="flex items-center justify-between">
-                    <span>
-                      {formatTaka(Number(p.amount))}
-                      <span className="text-gray-400 text-xs">
-                        {" "}
-                        · {new Date(p.paid_at).toLocaleDateString()}
-                        {p.method ? ` · ${p.method}` : ""}
-                      </span>
-                    </span>
-                    <span className="flex items-center gap-2">
-                      <form action={deletePayment}>
-                        <input type="hidden" name="id" value={p.id} />
-                        <input
-                          type="hidden"
-                          name="resident_id"
-                          value={resident.id}
-                        />
-                        <button className="text-red-500 text-xs hover:underline">
-                          Delete
-                        </button>
-                      </form>
-                    </span>
-                  </li>
-                ))}
-              </ul>
+        <section className="rounded-2xl bg-stone-900 p-5 text-white shadow-sm lg:col-span-7">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.16em] text-yellow-300">Monthly billing</p>
+              <h2 className="mt-1 text-xl font-bold">{formatMonth(monthToDate(month))}</h2>
+            </div>
+            <ResidentMonthPicker month={month} />
+          </div>
 
-              {latestMonthPayment && (
-                <Link
-                  href={`/dashboard/receipt/${latestMonthPayment.id}`}
-                  className="mt-3 inline-flex items-center justify-center w-full rounded-lg border border-brand text-brand px-3 py-2 text-sm font-medium hover:bg-brand-light"
-                >
-                  🖨 Print receipt
-                </Link>
-              )}
-            </div>
-          )}
-        </div>
-
-        <div className="bg-white rounded-xl border border-gray-100 p-5">
-          <h2 className="font-semibold text-brand-dark mb-3">Record a payment</h2>
-          <form action={recordPayment} className="space-y-3">
-            <input type="hidden" name="resident_id" value={resident.id} />
-            <div>
-              <label className="block text-xs text-gray-500 mb-1">
-                Billing month
-              </label>
-              <input
-                type="month"
-                name="period_month"
-                defaultValue={month}
-                required
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-              />
-            </div>
-            <div>
-              <label className="block text-xs text-gray-500 mb-1">
-                Amount (৳){due > 0 ? ` · remaining ${formatTaka(due)}` : ""}
-              </label>
-              <input
-                type="number"
-                name="amount"
-                step="0.01"
-                min="0.01"
-                defaultValue={due > 0 ? due : ""}
-                required
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-              />
-            </div>
-            <div>
-              <label className="block text-xs text-gray-500 mb-1">
-                Method (optional)
-              </label>
-              <input
-                name="method"
-                placeholder="Cash, bKash, bank…"
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-              />
-            </div>
-            <div>
-              <label className="block text-xs text-gray-500 mb-1">
-                Note (optional)
-              </label>
-              <input
-                name="note"
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-              />
-            </div>
-            <button className="w-full rounded-lg bg-brand text-white py-2 text-sm font-medium hover:bg-brand-dark">
-              Save payment
-            </button>
-          </form>
-        </div>
-      </div>
-
-      {/* Full history */}
-      <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-        <div className="px-4 py-3 border-b border-gray-100 font-semibold text-brand-dark">
-          Payment history
-        </div>
-        <table className="w-full text-sm">
-          <thead className="bg-gray-50 text-gray-500 text-left">
-            <tr>
-              <th className="px-4 py-2 font-medium">Month</th>
-              <th className="px-4 py-2 font-medium">Amount</th>
-              <th className="px-4 py-2 font-medium">Date</th>
-              <th className="px-4 py-2 font-medium">Method</th>
-              <th className="px-4 py-2 font-medium">Receipt</th>
-            </tr>
-          </thead>
-          <tbody>
-            {payments.length === 0 && (
-              <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-gray-400">
-                  No payments recorded yet.
-                </td>
-              </tr>
+          <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
+            <BillingMetric label="Monthly fee" value={formatTaka(fee)} />
+            <BillingMetric label="Paid" value={formatTaka(paidThisMonth)} />
+            <div className="col-span-2 sm:col-span-1"><BillingMetric label="Remaining" value={formatTaka(due)} emphasis /></div>
+          </div>
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-stone-700 pt-4">
+            <span className={`rounded-full px-3 py-1.5 text-xs font-bold ${status === "Paid" ? "bg-green-300 text-green-950" : status === "Partial" ? "bg-yellow-300 text-stone-950" : status === "Unpaid" ? "bg-red-200 text-red-950" : "bg-stone-700 text-stone-100"}`}>
+              Payment status: {status}
+            </span>
+            {latestMonthPayment && (
+              <Link href={`/dashboard/receipt/${latestMonthPayment.id}`} className="inline-flex min-h-11 items-center justify-center rounded-xl border border-stone-600 px-4 py-2 text-sm font-semibold text-white hover:bg-stone-800 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-yellow-300/30">
+                Print monthly receipt
+              </Link>
             )}
-            {payments.map((p) => (
-              <tr key={p.id} className="border-t border-gray-50">
-                <td className="px-4 py-2">{formatMonth(p.period_month)}</td>
-                <td className="px-4 py-2">{formatTaka(Number(p.amount))}</td>
-                <td className="px-4 py-2">
-                  {new Date(p.paid_at).toLocaleDateString()}
-                </td>
-                <td className="px-4 py-2">{p.method || "—"}</td>
-                <td className="px-4 py-2">
-                  {latestPaymentIdByMonth.get(p.period_month) === p.id ? (
-                    <Link
-                      href={`/dashboard/receipt/${p.id}`}
-                      className="text-brand hover:underline"
-                    >
-                      Print receipt
-                    </Link>
-                  ) : (
-                    <span className="text-gray-300">—</span>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+          </div>
+        </section>
+
+        <section className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm lg:col-span-5">
+          <p className="text-xs font-bold uppercase tracking-[0.16em] text-brand">Payment action</p>
+          <h2 className="mb-5 mt-1 text-xl font-bold text-stone-900">Record a payment</h2>
+          <PaymentForm key={month} residentId={resident.id} month={month} due={due} />
+        </section>
+
+        <section className="min-w-0 rounded-2xl border border-stone-200 bg-white p-5 shadow-sm lg:col-span-7">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.16em] text-brand">Selected month</p>
+              <h2 className="mt-1 text-xl font-bold text-stone-900">Transactions</h2>
+            </div>
+            <span className="rounded-full bg-stone-100 px-3 py-1 text-xs font-semibold text-stone-700">{monthPayments.length} recorded</span>
+          </div>
+          {monthPayments.length === 0 ? (
+            <p className="mt-8 rounded-xl bg-stone-50 px-4 py-8 text-center text-sm text-stone-500">No payments recorded for this month.</p>
+          ) : (
+            <ul className="mt-5 divide-y divide-stone-100">
+              {monthPayments.map((payment) => (
+                <li key={payment.id} className="flex flex-col gap-3 py-4 first:pt-0 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0">
+                    <p className="font-bold text-stone-900">{formatTaka(Number(payment.amount))}</p>
+                    <p className="break-words text-xs text-stone-500">{new Date(payment.paid_at).toLocaleDateString()} · {payment.method || "Method not specified"}</p>
+                  </div>
+                  <DeletePaymentButton paymentId={payment.id} residentId={resident.id} />
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
       </div>
+
+      <section className="min-w-0 overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm">
+        <div className="border-b border-stone-200 px-5 py-4">
+          <p className="text-xs font-bold uppercase tracking-[0.16em] text-brand">All transactions</p>
+          <h2 className="mt-1 text-xl font-bold text-stone-900">Payment history</h2>
+        </div>
+        {payments.length === 0 ? (
+          <p className="px-5 py-10 text-center text-sm text-stone-500">No payments recorded yet.</p>
+        ) : (
+          <>
+            <div className="hidden overflow-x-auto md:block">
+              <table className="w-full min-w-[680px] text-left text-sm">
+                <thead className="bg-stone-50 text-xs uppercase tracking-wide text-stone-500">
+                  <tr><th className="px-5 py-3 font-semibold">Month</th><th className="px-5 py-3 font-semibold">Amount</th><th className="px-5 py-3 font-semibold">Date</th><th className="px-5 py-3 font-semibold">Method</th><th className="px-5 py-3 font-semibold">Receipt</th></tr>
+                </thead>
+                <tbody className="divide-y divide-stone-100">
+                  {payments.map((payment) => (
+                    <tr key={payment.id}>
+                      <td className="px-5 py-3 font-medium text-stone-900">{formatMonth(payment.period_month)}</td>
+                      <td className="px-5 py-3">{formatTaka(Number(payment.amount))}</td>
+                      <td className="px-5 py-3">{new Date(payment.paid_at).toLocaleDateString()}</td>
+                      <td className="px-5 py-3">{payment.method || "—"}</td>
+                      <td className="px-5 py-3">{latestPaymentIdByMonth.get(payment.period_month) === payment.id ? <ReceiptLink id={payment.id} /> : <span className="text-stone-300">—</span>}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <ul className="divide-y divide-stone-100 md:hidden">
+              {payments.map((payment) => (
+                <li key={payment.id} className="space-y-3 p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0"><p className="font-bold text-stone-900">{formatMonth(payment.period_month)}</p><p className="mt-1 text-xs text-stone-500">{new Date(payment.paid_at).toLocaleDateString()} · {payment.method || "Method not specified"}</p></div>
+                    <p className="shrink-0 font-bold text-stone-900">{formatTaka(Number(payment.amount))}</p>
+                  </div>
+                  {latestPaymentIdByMonth.get(payment.period_month) === payment.id && <ReceiptLink id={payment.id} />}
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
+      </section>
+
+      <section className="rounded-2xl border border-red-200 bg-red-50/60 p-5">
+        <p className="text-xs font-bold uppercase tracking-[0.16em] text-red-700">Destructive controls</p>
+        <h2 className="mt-1 text-lg font-bold text-stone-900">Remove resident</h2>
+        <p className="mb-4 mt-1 text-sm text-stone-600">Payment history will be kept, but the resident will be removed from active views.</p>
+        <DeleteResidentButton residentId={resident.id} residentName={resident.name} />
+      </section>
     </div>
   );
 }
 
 function Info({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="bg-white rounded-xl border border-gray-100 p-3">
-      <div className="text-xs text-gray-500">{label}</div>
-      <div className="font-medium">{value}</div>
-    </div>
-  );
+  return <div className="min-w-0"><dt className="text-xs font-medium text-stone-500">{label}</dt><dd className="mt-1 break-words text-sm font-semibold text-stone-900">{value}</dd></div>;
 }
 
-function Row({ k, v, strong }: { k: string; v: string; strong?: boolean }) {
-  return (
-    <div className="flex justify-between">
-      <dt className="text-gray-500">{k}</dt>
-      <dd className={strong ? "font-semibold text-brand-dark" : ""}>{v}</dd>
-    </div>
-  );
+function BillingMetric({ label, value, emphasis }: { label: string; value: string; emphasis?: boolean }) {
+  return <div className={`rounded-xl border p-3 ${emphasis ? "border-yellow-300/40 bg-yellow-300/10" : "border-stone-700 bg-stone-800"}`}><p className="text-xs text-stone-400">{label}</p><p className={`mt-1 break-words text-lg font-bold ${emphasis ? "text-yellow-300" : "text-white"}`}>{value}</p></div>;
+}
+
+function ReceiptLink({ id }: { id: string }) {
+  return <Link href={`/dashboard/receipt/${id}`} className="inline-flex min-h-11 items-center text-sm font-semibold text-brand hover:underline focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/20">View receipt</Link>;
 }
