@@ -3,8 +3,8 @@
 import { useFormStatus } from "react-dom";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 
-type Variant = "primary" | "secondary" | "text" | "danger" | "dark";
-type Size = "sm" | "md" | "lg";
+type Variant = "primary" | "secondary" | "text" | "danger" | "dark" | "none";
+type Size = "sm" | "md" | "lg" | "none";
 
 type SubmitButtonProps = Omit<
   React.ButtonHTMLAttributes<HTMLButtonElement>,
@@ -23,12 +23,14 @@ const variantClasses: Record<Variant, string> = {
   text: "btn-text",
   danger: "btn-danger",
   dark: "btn-dark",
+  none: "",
 };
 
 const sizeClasses: Record<Size, string> = {
   sm: "sm:min-h-9 sm:px-3 sm:py-1.5 text-xs",
   md: "px-4 py-2 text-sm",
   lg: "px-5 py-3 text-base",
+  none: "",
 };
 
 export default function SubmitButton({
