@@ -1,5 +1,6 @@
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
+import { timingSafeEqual } from "crypto";
 
 const COOKIE_NAME = "kasturi_session";
 const MAX_AGE = 60 * 60 * 8; // 8 hours
@@ -41,8 +42,32 @@ export async function getSession(): Promise<{ username: string } | null> {
   }
 }
 
-export function verifyCredentials(username: string, password: string) {
-  const u = process.env.ADMIN_USERNAME;
-  const p = process.env.ADMIN_PASSWORD;
-  return Boolean(u && p && username === u && password === p);
+export type VerifyResult = "ok" | "invalid" | "not-configured";
+
+function safeEqual(a: string, b: string): boolean {
+  const bufA = Buffer.from(a);
+  const bufB = Buffer.from(b);
+  if (bufA.length !== bufB.length) return false;
+  return timingSafeEqual(bufA, bufB);
+}
+
+export function verifyCredentials(
+  username: unknown,
+  password: unknown,
+): VerifyResult {
+  const expectedUser = process.env.ADMIN_USERNAME?.trim();
+  const expectedPass = process.env.ADMIN_PASSWORD;
+
+  // Missing server configuration should not read as "wrong password".
+  if (!expectedUser || !expectedPass || !process.env.SESSION_SECRET) {
+    return "not-configured";
+  }
+
+  if (typeof username !== "string" || typeof password !== "string") {
+    return "invalid";
+  }
+
+  const userMatches = safeEqual(username.trim(), expectedUser);
+  const passMatches = safeEqual(password, expectedPass);
+  return userMatches && passMatches ? "ok" : "invalid";
 }
