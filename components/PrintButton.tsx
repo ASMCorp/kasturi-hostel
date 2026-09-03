@@ -3,10 +3,12 @@
 export default function PrintButton() {
   return (
     <button
+      type="button"
       onClick={() => window.print()}
-      className="rounded-lg bg-brand text-white px-4 py-2 text-sm font-medium hover:bg-brand-dark"
+      className="btn-dark px-4 py-2.5"
     >
-      🖨 Print receipt
+      <span aria-hidden="true">↧</span>
+      Print receipt
     </button>
   );
 }

@@ -6,110 +6,188 @@ import { getSupabaseAdmin } from "@/lib/supabase";
 import { getSession } from "@/lib/auth";
 import { monthToDate } from "@/lib/types";
 
+export type FormActionState = { error: string | null };
+
 async function requireAdmin() {
   const session = await getSession();
   if (!session) redirect("/login");
   return session;
 }
 
-export async function addResident(formData: FormData) {
+function text(formData: FormData, name: string) {
+  return String(formData.get(name) ?? "").trim();
+}
+
+function decimal(value: string) {
+  if (!/^(?:\d+(?:\.\d*)?|\.\d+)$/.test(value)) return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function ageValue(value: string) {
+  if (!/^\d+$/.test(value)) return null;
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed >= 1 && parsed <= 120 ? parsed : null;
+}
+
+export async function addResident(
+  _previousState: FormActionState,
+  formData: FormData
+): Promise<FormActionState> {
   await requireAdmin();
   const sb = getSupabaseAdmin();
-  const ageRaw = formData.get("age") as string;
-  const feeRaw = formData.get("monthly_fee") as string;
+  const name = text(formData, "name");
+  const ageRaw = text(formData, "age");
+  const feeRaw = text(formData, "monthly_fee");
+  const age = ageRaw ? ageValue(ageRaw) : null;
+  const monthlyFee = feeRaw ? decimal(feeRaw) : 0;
+
+  if (!name) return { error: "Enter the resident’s full name." };
+  if (ageRaw && age === null) return { error: "Enter a valid age." };
+  if (monthlyFee === null || monthlyFee < 0) {
+    return { error: "Enter a valid monthly fee." };
+  }
 
   const { error } = await sb.from("residents").insert({
-    name: (formData.get("name") as string)?.trim(),
-    age: ageRaw ? parseInt(ageRaw, 10) : null,
-    class: (formData.get("class") as string)?.trim() || null,
-    school: (formData.get("school") as string)?.trim() || null,
-    phone: (formData.get("phone") as string)?.trim() || null,
-    room_number: (formData.get("room_number") as string)?.trim() || null,
-    monthly_fee: feeRaw ? parseFloat(feeRaw) : 0,
+    name,
+    age,
+    class: text(formData, "class") || null,
+    school: text(formData, "school") || null,
+    phone: text(formData, "phone") || null,
+    room_number: text(formData, "room_number") || null,
+    monthly_fee: monthlyFee,
   });
-  if (error) throw new Error(error.message);
+  if (error) return { error: "Resident could not be added. Please try again." };
+
   revalidatePath("/dashboard");
   redirect("/dashboard");
 }
 
-export async function updateResident(formData: FormData) {
+export async function updateResident(
+  _previousState: FormActionState,
+  formData: FormData
+): Promise<FormActionState> {
   await requireAdmin();
   const sb = getSupabaseAdmin();
-  const id = formData.get("id") as string;
-  const ageRaw = formData.get("age") as string;
-  const feeRaw = formData.get("monthly_fee") as string;
+  const id = text(formData, "id");
+  const name = text(formData, "name");
+  const ageRaw = text(formData, "age");
+  const feeRaw = text(formData, "monthly_fee");
+  const age = ageRaw ? ageValue(ageRaw) : null;
+  const monthlyFee = feeRaw ? decimal(feeRaw) : 0;
 
-  const { error } = await sb
-    .from("residents")
-    .update({
-      name: (formData.get("name") as string)?.trim(),
-      age: ageRaw ? parseInt(ageRaw, 10) : null,
-      class: (formData.get("class") as string)?.trim() || null,
-      school: (formData.get("school") as string)?.trim() || null,
-      phone: (formData.get("phone") as string)?.trim() || null,
-      room_number: (formData.get("room_number") as string)?.trim() || null,
-      monthly_fee: feeRaw ? parseFloat(feeRaw) : 0,
-      active: formData.get("active") === "on",
-    })
-    .eq("id", id);
-  if (error) throw new Error(error.message);
-  revalidatePath("/dashboard");
-  redirect(`/dashboard/residents/${id}`);
-}
-
-export async function deleteResident(formData: FormData) {
-  await requireAdmin();
-  const sb = getSupabaseAdmin();
-  const id = formData.get("id") as string;
-  if (!id) throw new Error("Missing resident id");
-
-  // Soft delete: mark as deleted and deactivate, keeping payment history intact.
-  const { error } = await sb
-    .from("residents")
-    .update({ deleted_at: new Date().toISOString(), active: false })
-    .eq("id", id);
-  if (error) throw new Error(error.message);
-  revalidatePath("/dashboard");
-  redirect("/dashboard");
-}
-
-export async function recordPayment(formData: FormData) {
-  const session = await requireAdmin();
-  const sb = getSupabaseAdmin();
-  const residentId = formData.get("resident_id") as string;
-  const ym = formData.get("period_month") as string; // YYYY-MM
-  const amount = parseFloat(formData.get("amount") as string);
-  const method = (formData.get("method") as string)?.trim() || null;
-  const note = (formData.get("note") as string)?.trim() || null;
-
-  if (!residentId || !ym || !amount || amount <= 0) {
-    throw new Error("Missing or invalid payment details");
+  if (!id) return { error: "Resident information is missing. Refresh and try again." };
+  if (!name) return { error: "Enter the resident’s full name." };
+  if (ageRaw && age === null) return { error: "Enter a valid age." };
+  if (monthlyFee === null || monthlyFee < 0) {
+    return { error: "Enter a valid monthly fee." };
   }
 
   const { data, error } = await sb
-    .from("payments")
-    .insert({
-      resident_id: residentId,
-      period_month: monthToDate(ym),
-      amount,
-      method,
-      note,
-      created_by: session.username,
+    .from("residents")
+    .update({
+      name,
+      age,
+      class: text(formData, "class") || null,
+      school: text(formData, "school") || null,
+      phone: text(formData, "phone") || null,
+      room_number: text(formData, "room_number") || null,
+      monthly_fee: monthlyFee,
+      active: formData.get("active") === "on",
     })
+    .eq("id", id)
+    .is("deleted_at", null)
     .select("id")
-    .single();
-  if (error) throw new Error(error.message);
+    .maybeSingle();
+  if (error || !data) {
+    return { error: "Changes could not be saved. Refresh and try again." };
+  }
+
+  revalidatePath("/dashboard");
+  revalidatePath(`/dashboard/residents/${id}`);
+  redirect(`/dashboard/residents/${id}`);
+}
+
+export async function deleteResident(
+  _previousState: FormActionState,
+  formData: FormData
+): Promise<FormActionState> {
+  await requireAdmin();
+  const sb = getSupabaseAdmin();
+  const id = text(formData, "id");
+  if (!id) return { error: "Resident information is missing. Refresh and try again." };
+
+  const { data, error } = await sb
+    .from("residents")
+    .update({ deleted_at: new Date().toISOString(), active: false })
+    .eq("id", id)
+    .is("deleted_at", null)
+    .select("id")
+    .maybeSingle();
+  if (error || !data) {
+    return { error: "Resident could not be deleted. Refresh and try again." };
+  }
+
+  revalidatePath("/dashboard");
+  redirect("/dashboard");
+}
+
+export async function recordPayment(
+  _previousState: FormActionState,
+  formData: FormData
+): Promise<FormActionState> {
+  const session = await requireAdmin();
+  const sb = getSupabaseAdmin();
+  const residentId = text(formData, "resident_id");
+  const ym = text(formData, "period_month");
+  const amount = decimal(text(formData, "amount"));
+  const method = text(formData, "method") || null;
+  const note = text(formData, "note") || null;
+
+  if (!residentId || !/^[1-9]\d{3}-(0[1-9]|1[0-2])$/.test(ym)) {
+    return { error: "Choose a valid billing month." };
+  }
+  if (amount === null || amount <= 0) {
+    return { error: "Enter a payment amount greater than zero." };
+  }
+
+  const { error } = await sb.from("payments").insert({
+    resident_id: residentId,
+    period_month: monthToDate(ym),
+    amount,
+    method,
+    note,
+    created_by: session.username,
+  });
+  if (error) return { error: "Payment could not be recorded. Please try again." };
+
   revalidatePath(`/dashboard/residents/${residentId}`);
   redirect(`/dashboard/residents/${residentId}?month=${ym}&paid=1`);
 }
 
-export async function deletePayment(formData: FormData) {
+export async function deletePayment(
+  _previousState: FormActionState,
+  formData: FormData
+): Promise<FormActionState> {
   await requireAdmin();
   const sb = getSupabaseAdmin();
-  const id = formData.get("id") as string;
-  const residentId = formData.get("resident_id") as string;
-  const { error } = await sb.from("payments").delete().eq("id", id);
-  if (error) throw new Error(error.message);
+  const id = text(formData, "id");
+  const residentId = text(formData, "resident_id");
+  if (!id || !residentId) {
+    return { error: "Payment information is missing. Refresh and try again." };
+  }
+
+  const { data, error } = await sb
+    .from("payments")
+    .delete()
+    .eq("id", id)
+    .eq("resident_id", residentId)
+    .select("id")
+    .maybeSingle();
+  if (error || !data) {
+    return { error: "Payment could not be deleted. Refresh and try again." };
+  }
+
   revalidatePath(`/dashboard/residents/${residentId}`);
   redirect(`/dashboard/residents/${residentId}`);
 }
