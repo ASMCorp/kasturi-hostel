@@ -28,8 +28,10 @@ export default function DeleteResidentButton({
     >
       <input type="hidden" name="id" value={residentId} />
       <SubmitButton
+        variant="none"
+        size="none"
         pendingLabel="Deleting resident…"
-        className="min-h-11 rounded-xl border border-red-300 bg-white px-4 py-2.5 text-sm font-semibold text-red-700 transition hover:bg-red-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-red-200 disabled:cursor-not-allowed disabled:opacity-60"
+        className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-red-300 bg-white px-4 py-2.5 text-sm font-semibold text-red-700 transition hover:bg-red-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-red-200 disabled:cursor-not-allowed disabled:opacity-60"
       >
         Delete resident
       </SubmitButton>
