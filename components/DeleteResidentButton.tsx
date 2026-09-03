@@ -1,10 +1,28 @@
 "use client";
 
-import { useFormState } from "react-dom";
+import { useRef, useState } from "react";
+import { useFormState, useFormStatus } from "react-dom";
 import { deleteResident, type FormActionState } from "@/app/actions";
-import SubmitButton from "@/components/ui/SubmitButton";
+import LoadingSpinner from "@/components/ui/LoadingSpinner";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
 
 const initialState: FormActionState = { error: null };
+
+function TriggerButton({ onOpen }: { onOpen: () => void }) {
+  const { pending } = useFormStatus();
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      disabled={pending}
+      aria-busy={pending}
+      className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-red-300 bg-white px-4 py-2.5 text-sm font-semibold text-red-700 transition hover:bg-red-50 focus:outline-none focus-visible:ring-4 focus-visible:ring-red-200 disabled:cursor-not-allowed disabled:opacity-60"
+    >
+      {pending && <LoadingSpinner label="Deleting resident" />}
+      {pending ? "Deleting resident…" : "Delete resident"}
+    </button>
+  );
+}
 
 export default function DeleteResidentButton({
   residentId,
@@ -14,32 +32,34 @@ export default function DeleteResidentButton({
   residentName: string;
 }) {
   const [state, formAction] = useFormState(deleteResident, initialState);
+  const [confirming, setConfirming] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
 
   return (
-    <form
-      action={formAction}
-      className="space-y-2"
-      onSubmit={(event) => {
-        const confirmed = window.confirm(
-          `Delete ${residentName}? They will be removed from the resident list. Payment history is kept and this can be restored later.`
-        );
-        if (!confirmed) event.preventDefault();
-      }}
-    >
+    <form ref={formRef} action={formAction} className="space-y-2">
       <input type="hidden" name="id" value={residentId} />
-      <SubmitButton
-        variant="none"
-        size="none"
-        pendingLabel="Deleting resident…"
-        className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-red-300 bg-white px-4 py-2.5 text-sm font-semibold text-red-700 transition hover:bg-red-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-red-200 disabled:cursor-not-allowed disabled:opacity-60"
-      >
-        Delete resident
-      </SubmitButton>
+
+      <TriggerButton onOpen={() => setConfirming(true)} />
+
       {state.error && (
         <p role="alert" className="max-w-sm text-sm font-medium text-red-700">
           {state.error}
         </p>
       )}
+
+      <ConfirmDialog
+        open={confirming}
+        tone="danger"
+        title={`Delete ${residentName}?`}
+        message="They will be removed from the resident list. Payment history is kept and this can be restored later."
+        confirmLabel="Delete resident"
+        cancelLabel="Cancel"
+        onCancel={() => setConfirming(false)}
+        onConfirm={() => {
+          setConfirming(false);
+          formRef.current?.requestSubmit();
+        }}
+      />
     </form>
   );
 }
