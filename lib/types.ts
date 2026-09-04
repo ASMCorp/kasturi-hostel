@@ -34,12 +34,3 @@ export function currentMonth(): string {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
-
-export function formatMonth(dateStr: string): string {
-  const d = new Date(dateStr);
-  return d.toLocaleDateString("en-US", { month: "long", year: "numeric" });
-}
-
-export function formatTaka(n: number): string {
-  return "৳" + Number(n).toLocaleString("en-US", { maximumFractionDigits: 2 });
-}

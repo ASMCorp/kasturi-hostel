@@ -3,7 +3,9 @@
 import { useTransition } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
-import { formatMonth, monthToDate } from "@/lib/types";
+import { monthToDate } from "@/lib/types";
+import { formatMonth } from "@/lib/i18n";
+import { useLanguage } from "@/components/LanguageProvider";
 
 type Tone = "light" | "dark";
 
@@ -22,6 +24,7 @@ export default function MonthNavigator({
   tone?: Tone;
   dropParams?: string[];
 }) {
+  const { locale, dictionary: t } = useLanguage();
   const pathname = usePathname();
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -60,7 +63,7 @@ export default function MonthNavigator({
           onClick={() => changeMonth(shiftMonth(month, -1))}
           disabled={isPending}
           className={arrowClass}
-          aria-label="Previous month"
+          aria-label={t.monthNavigator.previous}
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" className="h-4 w-4" aria-hidden="true">
             <path d="m15 18-6-6 6-6" strokeLinecap="round" strokeLinejoin="round" />
@@ -68,7 +71,7 @@ export default function MonthNavigator({
         </button>
 
         <label className="relative min-w-0 flex-1">
-          <span className="sr-only">Billing month</span>
+          <span className="sr-only">{t.paymentForm.billingMonth}</span>
           <input
             type="month"
             value={month}
@@ -79,13 +82,13 @@ export default function MonthNavigator({
                 ? "control-dark h-11 w-full min-w-[9.5rem] [color-scheme:dark]"
                 : "control h-11 w-full min-w-[9.5rem]"
             }
-            aria-label={`Billing month, currently ${formatMonth(monthToDate(month))}`}
+            aria-label={`${t.monthNavigator.current} ${formatMonth(monthToDate(month), locale)}`}
           />
           {isPending && (
             <span
               className={`pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 ${isDark ? "text-accent" : "text-brand"}`}
             >
-              <LoadingSpinner label="Loading selected month" />
+              <LoadingSpinner label={t.monthNavigator.loading} />
             </span>
           )}
         </label>
@@ -95,7 +98,7 @@ export default function MonthNavigator({
           onClick={() => changeMonth(shiftMonth(month, 1))}
           disabled={isPending}
           className={arrowClass}
-          aria-label="Next month"
+          aria-label={t.monthNavigator.next}
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" className="h-4 w-4" aria-hidden="true">
             <path d="m9 18 6-6-6-6" strokeLinecap="round" strokeLinejoin="round" />

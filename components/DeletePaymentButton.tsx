@@ -5,10 +5,12 @@ import { useFormState, useFormStatus } from "react-dom";
 import { deletePayment, type FormActionState } from "@/app/actions";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
+import { useLanguage } from "@/components/LanguageProvider";
 
 const initialState: FormActionState = { error: null };
 
 function TriggerButton({ onOpen }: { onOpen: () => void }) {
+  const { dictionary: t } = useLanguage();
   const { pending } = useFormStatus();
   return (
     <button
@@ -18,13 +20,14 @@ function TriggerButton({ onOpen }: { onOpen: () => void }) {
       aria-busy={pending}
       className="inline-flex min-h-11 items-center gap-1.5 rounded-lg px-2.5 text-xs font-semibold text-red-700 transition-colors hover:bg-red-50 focus:outline-none focus-visible:ring-4 focus-visible:ring-red-200 disabled:cursor-not-allowed disabled:opacity-60"
     >
-      {pending ? <LoadingSpinner label="Deleting payment" /> : <span aria-hidden="true">✕</span>}
-      {pending ? "Deleting…" : "Delete payment"}
+      {pending ? <LoadingSpinner label={t.deletePayment.deletingLabel} /> : <span aria-hidden="true">✕</span>}
+      {pending ? t.deletePayment.deleting : t.deletePayment.delete}
     </button>
   );
 }
 
 export default function DeletePaymentButton({ paymentId, residentId }: { paymentId: string; residentId: string }) {
+  const { dictionary: t } = useLanguage();
   const [state, formAction] = useFormState(deletePayment, initialState);
   const [confirming, setConfirming] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
@@ -41,10 +44,10 @@ export default function DeletePaymentButton({ paymentId, residentId }: { payment
       <ConfirmDialog
         open={confirming}
         tone="danger"
-        title="Delete this payment?"
-        message="This cannot be undone and will change the resident’s balance for the month."
-        confirmLabel="Delete payment"
-        cancelLabel="Keep it"
+        title={t.deletePayment.title}
+        message={t.deletePayment.message}
+        confirmLabel={t.deletePayment.delete}
+        cancelLabel={t.deletePayment.keep}
         onCancel={() => setConfirming(false)}
         onConfirm={() => {
           setConfirming(false);

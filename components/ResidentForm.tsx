@@ -5,6 +5,7 @@ import { useFormState } from "react-dom";
 import type { FormActionState } from "@/app/actions";
 import type { Resident } from "@/lib/types";
 import SubmitButton from "@/components/ui/SubmitButton";
+import { useLanguage } from "@/components/LanguageProvider";
 
 const initialState: FormActionState = { error: null };
 const inputClass =
@@ -21,17 +22,18 @@ export default function ResidentForm({
   submitLabel: string;
   cancelHref: string;
 }) {
+  const { dictionary: t } = useLanguage();
   const [state, formAction] = useFormState(action, initialState);
 
   return (
     <form action={formAction} className="space-y-5">
       {resident && <input type="hidden" name="id" value={resident.id} />}
 
-      <FormSection eyebrow="Personal details" title="Who is staying with us?">
+      <FormSection eyebrow={t.residentForm.personalDetails} title={t.residentForm.whoStays}>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field
             id="resident-name"
-            label="Full name"
+            label={t.residentForm.fullName}
             name="name"
             autoComplete="name"
             defaultValue={resident?.name}
@@ -39,7 +41,7 @@ export default function ResidentForm({
           />
           <Field
             id="resident-age"
-            label="Age"
+            label={t.residentForm.age}
             name="age"
             type="number"
             inputMode="numeric"
@@ -49,7 +51,7 @@ export default function ResidentForm({
           />
           <Field
             id="resident-phone"
-            label="Phone number"
+            label={t.residentForm.phone}
             name="phone"
             type="tel"
             inputMode="tel"
@@ -60,18 +62,18 @@ export default function ResidentForm({
         </div>
       </FormSection>
 
-      <FormSection eyebrow="Education" title="Study information">
+      <FormSection eyebrow={t.residentForm.education} title={t.residentForm.studyInformation}>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field
             id="resident-class"
-            label="Class"
+            label={t.residentForm.class}
             name="class"
             autoComplete="off"
             defaultValue={resident?.class ?? ""}
           />
           <Field
             id="resident-school"
-            label="School / Institution"
+            label={t.residentForm.school}
             name="school"
             autoComplete="organization"
             defaultValue={resident?.school ?? ""}
@@ -79,18 +81,18 @@ export default function ResidentForm({
         </div>
       </FormSection>
 
-      <FormSection eyebrow="Accommodation & billing" title="Room and monthly fee">
+      <FormSection eyebrow={t.residentForm.accommodation} title={t.residentForm.roomAndFee}>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field
             id="resident-room"
-            label="Room number"
+            label={t.residentForm.roomNumber}
             name="room_number"
             autoComplete="off"
             defaultValue={resident?.room_number ?? ""}
           />
           <Field
             id="resident-fee"
-            label="Monthly fee (৳)"
+            label={t.residentForm.monthlyFee}
             name="monthly_fee"
             type="number"
             inputMode="decimal"
@@ -113,7 +115,7 @@ export default function ResidentForm({
               defaultChecked={resident.active}
               className="h-5 w-5 rounded border-line text-brand focus:ring-brand"
             />
-            Active resident
+            {t.residentForm.activeResident}
           </label>
         )}
       </FormSection>
@@ -129,9 +131,9 @@ export default function ResidentForm({
           href={cancelHref}
           className="btn-secondary px-5 py-2.5"
         >
-          Cancel
+          {t.common.cancel}
         </Link>
-        <SubmitButton pendingLabel={resident ? "Saving changes…" : "Adding resident…"} className="px-5 py-2.5">
+        <SubmitButton pendingLabel={resident ? t.residentForm.saving : t.residentForm.adding} className="px-5 py-2.5">
           {submitLabel}
         </SubmitButton>
       </div>

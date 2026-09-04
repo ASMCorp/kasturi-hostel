@@ -1,6 +1,9 @@
 "use client";
 
+import { useLanguage } from "@/components/LanguageProvider";
+
 export default function PrintButton() {
+  const { dictionary: t } = useLanguage();
   return (
     <button
       type="button"
@@ -8,7 +11,7 @@ export default function PrintButton() {
       className="btn-dark px-4 py-2.5"
     >
       <span aria-hidden="true">↧</span>
-      Print receipt
+      {t.receipt.print}
     </button>
   );
 }

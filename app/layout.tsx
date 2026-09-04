@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
-import { Manrope } from "next/font/google";
+import { Manrope, Noto_Sans_Bengali } from "next/font/google";
+import LanguageProvider from "@/components/LanguageProvider";
+import { getLocale, getServerDictionary } from "@/lib/i18n-server";
 import "./globals.css";
 
 const manrope = Manrope({
@@ -16,19 +18,32 @@ const manrope = Manrope({
   ],
 });
 
-export const metadata: Metadata = {
-  title: "Kasturi Girls Hostel — Management System",
-  description: "Kasturi Girls Hostel management system",
-};
+const notoSansBengali = Noto_Sans_Bengali({
+  subsets: ["bengali"],
+  display: "swap",
+  variable: "--font-noto-bengali",
+});
+
+export function generateMetadata(): Metadata {
+  const t = getServerDictionary();
+  return {
+    title: t.metadata.title,
+    description: t.metadata.description,
+  };
+}
 
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const locale = getLocale();
+
   return (
-    <html lang="en">
-      <body className={`${manrope.variable} font-sans`}>{children}</body>
+    <html lang={locale === "bn" ? "bn-BD" : "en"}>
+      <body className={`${manrope.variable} ${notoSansBengali.variable} font-sans`}>
+        <LanguageProvider locale={locale}>{children}</LanguageProvider>
+      </body>
     </html>
   );
 }

@@ -5,10 +5,12 @@ import { useFormState, useFormStatus } from "react-dom";
 import { deleteResident, type FormActionState } from "@/app/actions";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
+import { useLanguage } from "@/components/LanguageProvider";
 
 const initialState: FormActionState = { error: null };
 
 function TriggerButton({ onOpen }: { onOpen: () => void }) {
+  const { dictionary: t } = useLanguage();
   const { pending } = useFormStatus();
   return (
     <button
@@ -18,8 +20,8 @@ function TriggerButton({ onOpen }: { onOpen: () => void }) {
       aria-busy={pending}
       className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-red-300 bg-white px-4 py-2.5 text-sm font-semibold text-red-700 transition hover:bg-red-50 focus:outline-none focus-visible:ring-4 focus-visible:ring-red-200 disabled:cursor-not-allowed disabled:opacity-60"
     >
-      {pending && <LoadingSpinner label="Deleting resident" />}
-      {pending ? "Deleting resident…" : "Delete resident"}
+      {pending && <LoadingSpinner label={t.deleteResident.deletingLabel} />}
+      {pending ? t.deleteResident.deleting : t.deleteResident.delete}
     </button>
   );
 }
@@ -31,6 +33,7 @@ export default function DeleteResidentButton({
   residentId: string;
   residentName: string;
 }) {
+  const { dictionary: t } = useLanguage();
   const [state, formAction] = useFormState(deleteResident, initialState);
   const [confirming, setConfirming] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
@@ -50,10 +53,10 @@ export default function DeleteResidentButton({
       <ConfirmDialog
         open={confirming}
         tone="danger"
-        title={`Delete ${residentName}?`}
-        message="They will be removed from the resident list. Payment history is kept and this can be restored later."
-        confirmLabel="Delete resident"
-        cancelLabel="Cancel"
+        title={`${residentName} ${t.deleteResident.titleSuffix}`}
+        message={t.deleteResident.message}
+        confirmLabel={t.deleteResident.delete}
+        cancelLabel={t.common.cancel}
         onCancel={() => setConfirming(false)}
         onConfirm={() => {
           setConfirming(false);
