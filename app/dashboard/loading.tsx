@@ -1,7 +1,10 @@
+import { getServerDictionary } from "@/lib/i18n-server";
+
 export default function DashboardLoading() {
+  const t = getServerDictionary();
   return (
-    <div role="status" aria-live="polite" aria-label="Loading dashboard content" className="space-y-5">
-      <span className="sr-only">Loading dashboard content…</span>
+    <div role="status" aria-live="polite" aria-label={t.common.loading} className="space-y-5">
+      <span className="sr-only">{t.common.loading}</span>
       <div className="h-11 w-36 animate-pulse rounded-xl bg-line motion-reduce:animate-none" />
       <div className="h-44 animate-pulse rounded-card bg-charcoal/85 motion-reduce:animate-none" />
       <div className="grid gap-5 lg:grid-cols-12">

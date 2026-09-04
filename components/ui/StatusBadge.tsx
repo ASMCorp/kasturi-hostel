@@ -1,3 +1,7 @@
+"use client";
+
+import { useLanguage } from "@/components/LanguageProvider";
+
 type Status = "paid" | "partial" | "unpaid" | "inactive" | "no-fee";
 
 type StatusBadgeProps = {
@@ -13,15 +17,15 @@ const styles: Record<Status, string> = {
   "no-fee": "border-stone-200 bg-stone-100 text-stone-600",
 };
 
-const labels: Record<Status, string> = {
-  paid: "Paid",
-  partial: "Partial",
-  unpaid: "Unpaid",
-  inactive: "Inactive",
-  "no-fee": "No fee set",
-};
-
 export default function StatusBadge({ status, label }: StatusBadgeProps) {
+  const { dictionary: t } = useLanguage();
+  const labels: Record<Status, string> = {
+    paid: t.status.paid,
+    partial: t.status.partial,
+    unpaid: t.status.unpaid,
+    inactive: t.status.inactive,
+    "no-fee": t.status.noFee,
+  };
   return (
     <span
       className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${styles[status]}`}

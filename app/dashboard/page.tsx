@@ -4,9 +4,9 @@ import {
   Payment,
   currentMonth,
   monthToDate,
-  formatTaka,
-  formatMonth,
 } from "@/lib/types";
+import { formatCurrency, formatMonth, formatNumber } from "@/lib/i18n";
+import { getLocale, getServerDictionary } from "@/lib/i18n-server";
 import MonthNavigator from "@/components/MonthNavigator";
 import ResidentDirectory, {
   ResidentDirectoryRow,
@@ -20,6 +20,8 @@ export default async function DashboardPage({
 }: {
   searchParams: { month?: string; q?: string };
 }) {
+  const locale = getLocale();
+  const t = getServerDictionary();
   const month = /^[1-9]\d{3}-(0[1-9]|1[0-2])$/.test(searchParams.month || "")
     ? searchParams.month!
     : currentMonth();
@@ -86,41 +88,41 @@ export default async function DashboardPage({
       <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.16em] text-brand">
-            Hostel overview
+            {t.dashboard.overview}
           </p>
           <h1 className="mt-2 text-3xl font-extrabold tracking-tight text-charcoal sm:text-4xl">
-            Residents
+            {t.dashboard.residents}
           </h1>
           <p className="mt-2 text-sm text-muted sm:text-base">
-            Payment status for {formatMonth(monthToDate(month))}
+            {t.dashboard.paymentStatusFor} {formatMonth(monthToDate(month), locale)}
           </p>
         </div>
         <div className="w-full sm:w-auto">
           <p className="mb-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-muted">
-            Billing month
+            {t.dashboard.billingMonth}
           </p>
           <MonthNavigator month={month} tone="light" />
         </div>
       </div>
 
-      <section aria-label="Monthly payment summary" className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <section aria-label={t.dashboard.monthlySummary} className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <MetricCard
-          label="Collected"
-          value={formatTaka(totalCollected)}
-          detail={`${roundedPercentage}% of expected fees`}
+          label={t.dashboard.collected}
+          value={formatCurrency(totalCollected, locale)}
+          detail={`${formatNumber(roundedPercentage, locale)}% ${t.dashboard.expectedFees}`}
           variant="dark"
           className="sm:col-span-2 lg:row-span-2"
           valueClassName="text-4xl sm:text-5xl lg:mt-6 lg:text-6xl"
         >
           <div className="mt-7 lg:mt-12">
             <div className="mb-2 flex items-center justify-between gap-3 text-xs font-semibold text-white/70">
-              <span>Collection progress</span>
-              <span>{roundedPercentage}%</span>
+              <span>{t.dashboard.collectionProgress}</span>
+              <span>{formatNumber(roundedPercentage, locale)}%</span>
             </div>
             <div
               className="h-2 overflow-hidden rounded-full bg-white/15"
               role="progressbar"
-              aria-label="Monthly collection progress"
+              aria-label={t.dashboard.monthlyProgress}
               aria-valuemin={0}
               aria-valuemax={100}
               aria-valuenow={Math.min(Math.max(roundedPercentage, 0), 100)}
@@ -134,25 +136,25 @@ export default async function DashboardPage({
         </MetricCard>
 
         <MetricCard
-          label="Residents"
-          value={String(rows.length)}
-          detail="Total resident records"
+          label={t.dashboard.residents}
+          value={formatNumber(rows.length, locale)}
+          detail={t.dashboard.residentRecords}
         />
         <MetricCard
-          label="Fully paid"
-          value={`${fullyPaid}/${rows.length}`}
-          detail="Residents settled this month"
+          label={t.dashboard.fullyPaid}
+          value={`${formatNumber(fullyPaid, locale)}/${formatNumber(rows.length, locale)}`}
+          detail={t.dashboard.settledThisMonth}
           variant="accent"
         />
         <MetricCard
-          label="Expected"
-          value={formatTaka(totalExpected)}
-          detail="Total monthly fees"
+          label={t.dashboard.expected}
+          value={formatCurrency(totalExpected, locale)}
+          detail={t.dashboard.totalMonthlyFees}
         />
         <MetricCard
-          label="Outstanding"
-          value={formatTaka(outstanding)}
-          detail={outstanding > 0 ? "Still to collect" : "Nothing outstanding"}
+          label={t.dashboard.outstanding}
+          value={formatCurrency(outstanding, locale)}
+          detail={outstanding > 0 ? t.dashboard.stillToCollect : t.dashboard.nothingOutstanding}
         />
       </section>
 

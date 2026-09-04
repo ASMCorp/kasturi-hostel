@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Resident, formatTaka } from "@/lib/types";
+import { Resident } from "@/lib/types";
+import { formatCurrency, formatNumber } from "@/lib/i18n";
+import { useLanguage } from "@/components/LanguageProvider";
 import StatusBadge from "@/components/ui/StatusBadge";
 
 export type ResidentDirectoryRow = Resident & { paid: number };
@@ -34,6 +36,7 @@ export default function ResidentDirectory({
   rows,
   initialQuery,
 }: ResidentDirectoryProps) {
+  const { locale, dictionary: t } = useLanguage();
   const [query, setQuery] = useState(initialQuery);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -84,16 +87,16 @@ export default function ResidentDirectory({
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <h2 id="resident-directory-title" className="text-lg font-extrabold text-charcoal">
-              Resident directory
+              {t.directory.title}
             </h2>
             <p className="mt-1 text-sm text-muted" aria-live="polite" aria-atomic="true">
-              Showing {filteredRows.length} of {rows.length} residents
+              {t.directory.showing} {formatNumber(filteredRows.length, locale)} {t.directory.of} {formatNumber(rows.length, locale)} {t.directory.residents}
             </p>
           </div>
 
           <div className="w-full lg:max-w-md">
             <label htmlFor="resident-search" className="mb-1.5 block text-sm font-semibold text-charcoal">
-              Search residents
+              {t.directory.search}
             </label>
             <div className="relative">
               <svg
@@ -114,7 +117,7 @@ export default function ResidentDirectory({
                 type="search"
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
-                placeholder="Name, room, phone, school or class"
+                placeholder={t.directory.searchPlaceholder}
                 autoComplete="off"
                 className="control w-full pl-11 pr-20"
               />
@@ -123,9 +126,9 @@ export default function ResidentDirectory({
                   type="button"
                   onClick={clearSearch}
                   className="absolute right-0.5 top-1/2 min-h-11 -translate-y-1/2 rounded-lg px-3 text-sm font-semibold text-brand-dark hover:bg-brand-light focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
-                  aria-label="Clear resident search"
+                  aria-label={t.directory.clearSearchLabel}
                 >
-                  Clear
+                  {t.directory.clear}
                 </button>
               )}
             </div>
@@ -135,18 +138,18 @@ export default function ResidentDirectory({
 
       {rows.length === 0 ? (
         <div className="px-5 py-14 text-center">
-          <p className="font-semibold text-charcoal">No residents yet</p>
-          <p className="mt-1 text-sm text-muted">Add the first resident to start the directory.</p>
+          <p className="font-semibold text-charcoal">{t.directory.noResidents}</p>
+          <p className="mt-1 text-sm text-muted">{t.directory.addFirst}</p>
           <Link href="/dashboard/residents/new" className="btn-primary mt-5">
-            Add resident
+            {t.nav.addResident}
           </Link>
         </div>
       ) : filteredRows.length === 0 ? (
         <div className="px-5 py-14 text-center">
-          <p className="font-semibold text-charcoal">No residents match this search</p>
-          <p className="mt-1 text-sm text-muted">Try another name, room, phone, school or class.</p>
+          <p className="font-semibold text-charcoal">{t.directory.noMatch}</p>
+          <p className="mt-1 text-sm text-muted">{t.directory.tryAnother}</p>
           <button type="button" onClick={clearSearch} className="btn-secondary mt-5">
-            Clear search
+            {t.directory.clearSearch}
           </button>
         </div>
       ) : (
@@ -155,12 +158,12 @@ export default function ResidentDirectory({
             <table className="w-full text-left text-sm">
               <thead className="bg-stone-50 text-xs uppercase tracking-wider text-muted">
                 <tr>
-                  <th scope="col" className="px-5 py-3 font-semibold">Name</th>
-                  <th scope="col" className="px-4 py-3 font-semibold">Room</th>
-                  <th scope="col" className="px-4 py-3 font-semibold">Fee</th>
-                  <th scope="col" className="px-4 py-3 font-semibold">Paid</th>
-                  <th scope="col" className="px-4 py-3 font-semibold">Status</th>
-                  <th scope="col" className="px-5 py-3"><span className="sr-only">Actions</span></th>
+                  <th scope="col" className="px-5 py-3 font-semibold">{t.directory.name}</th>
+                  <th scope="col" className="px-4 py-3 font-semibold">{t.directory.room}</th>
+                  <th scope="col" className="px-4 py-3 font-semibold">{t.directory.fee}</th>
+                  <th scope="col" className="px-4 py-3 font-semibold">{t.directory.paid}</th>
+                  <th scope="col" className="px-4 py-3 font-semibold">{t.directory.status}</th>
+                  <th scope="col" className="px-5 py-3"><span className="sr-only">{t.directory.actions}</span></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-line/70">
@@ -177,16 +180,16 @@ export default function ResidentDirectory({
                           {row.name}
                         </Link>
                         <div className="mt-1 text-xs text-muted">
-                          {[row.school, row.class].filter(Boolean).join(" · ") || "No school details"}
+                          {[row.school, row.class].filter(Boolean).join(" · ") || t.directory.noSchoolDetails}
                         </div>
                       </td>
                       <td className="px-4 py-4 text-charcoal">{row.room_number || "—"}</td>
-                      <td className="whitespace-nowrap px-4 py-4">{formatTaka(Number(row.monthly_fee))}</td>
+                      <td className="whitespace-nowrap px-4 py-4">{formatCurrency(Number(row.monthly_fee), locale)}</td>
                       <td className="px-4 py-4">
-                        <span className="whitespace-nowrap font-semibold">{formatTaka(row.paid)}</span>
+                        <span className="whitespace-nowrap font-semibold">{formatCurrency(row.paid, locale)}</span>
                         {due > 0 && row.paid > 0 && (
                           <span className="mt-0.5 block whitespace-nowrap text-xs text-amber-700">
-                            {formatTaka(due)} due
+                            {formatCurrency(due, locale)} {t.directory.due}
                           </span>
                         )}
                       </td>
@@ -200,9 +203,9 @@ export default function ResidentDirectory({
                         <Link
                           href={`/dashboard/residents/${row.id}`}
                           className="btn-text whitespace-nowrap px-3"
-                          aria-label={`Manage ${row.name}`}
+                          aria-label={`${t.directory.manage} ${row.name}`}
                         >
-                          Manage <span aria-hidden="true">→</span>
+                          {t.directory.manage} <span aria-hidden="true">→</span>
                         </Link>
                       </td>
                     </tr>
@@ -227,8 +230,8 @@ export default function ResidentDirectory({
                         {row.name}
                       </Link>
                       <p className="mt-1 text-sm text-muted">
-                        Room {row.room_number || "—"}
-                        {row.class ? ` · Class ${row.class}` : ""}
+                        {t.directory.room} {row.room_number || "—"}
+                        {row.class ? ` · ${t.directory.class} ${row.class}` : ""}
                       </p>
                     </div>
                     <div className="flex shrink-0 flex-col items-end gap-1">
@@ -239,17 +242,17 @@ export default function ResidentDirectory({
 
                   <dl className="mt-4 grid grid-cols-2 gap-3 rounded-xl bg-stone-50 p-3 text-sm">
                     <div>
-                      <dt className="text-xs text-muted">Monthly fee</dt>
-                      <dd className="mt-1 font-semibold text-charcoal">{formatTaka(Number(row.monthly_fee))}</dd>
+                      <dt className="text-xs text-muted">{t.directory.monthlyFee}</dt>
+                      <dd className="mt-1 font-semibold text-charcoal">{formatCurrency(Number(row.monthly_fee), locale)}</dd>
                     </div>
                     <div>
-                      <dt className="text-xs text-muted">Paid</dt>
-                      <dd className="mt-1 font-semibold text-charcoal">{formatTaka(row.paid)}</dd>
+                      <dt className="text-xs text-muted">{t.directory.paid}</dt>
+                      <dd className="mt-1 font-semibold text-charcoal">{formatCurrency(row.paid, locale)}</dd>
                     </div>
                     {due > 0 && (
                       <div className="col-span-2">
-                        <dt className="text-xs text-muted">Outstanding</dt>
-                        <dd className="mt-1 font-semibold text-amber-800">{formatTaka(due)}</dd>
+                        <dt className="text-xs text-muted">{t.directory.outstanding}</dt>
+                        <dd className="mt-1 font-semibold text-amber-800">{formatCurrency(due, locale)}</dd>
                       </div>
                     )}
                   </dl>
@@ -257,9 +260,9 @@ export default function ResidentDirectory({
                   <Link
                     href={`/dashboard/residents/${row.id}`}
                     className="btn-secondary mt-4 w-full"
-                    aria-label={`Manage ${row.name}`}
+                    aria-label={`${t.directory.manage} ${row.name}`}
                   >
-                    Manage resident <span aria-hidden="true">→</span>
+                    {t.directory.manageResident} <span aria-hidden="true">→</span>
                   </Link>
                 </article>
               );

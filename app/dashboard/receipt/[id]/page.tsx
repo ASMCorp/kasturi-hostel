@@ -1,12 +1,16 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getSupabaseAdmin } from "@/lib/supabase";
-import { type Resident, type Payment, formatTaka, formatMonth } from "@/lib/types";
+import { type Resident, type Payment } from "@/lib/types";
+import { formatCurrency, formatDateTime, formatMonth, formatNumber, formatPaymentMethod } from "@/lib/i18n";
+import { getLocale, getServerDictionary } from "@/lib/i18n-server";
 import PrintButton from "@/components/PrintButton";
 
 export const dynamic = "force-dynamic";
 
 export default async function ReceiptPage({ params }: { params: { id: string } }) {
+  const locale = getLocale();
+  const t = getServerDictionary();
   const sb = getSupabaseAdmin();
   const paymentResult = await sb.from("payments").select("*").eq("id", params.id).single();
 
@@ -47,7 +51,7 @@ export default async function ReceiptPage({ params }: { params: { id: string } }
     <div className="min-w-0">
       <div className="no-print mb-5 flex flex-col gap-3 min-[380px]:flex-row min-[380px]:items-center min-[380px]:justify-between">
         <Link href={`/dashboard/residents/${resident.id}`} className="inline-flex min-h-11 items-center text-sm font-semibold text-brand hover:underline focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/20">
-          ← Back to resident
+          ← {t.receipt.back}
         </Link>
         <PrintButton />
       </div>
@@ -58,74 +62,74 @@ export default async function ReceiptPage({ params }: { params: { id: string } }
             <div className="flex min-w-0 items-center gap-3">
               <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-accent text-xl font-black text-charcoal">K</span>
               <div className="min-w-0">
-                <h1 className="break-words text-lg font-bold sm:text-xl">Kasturi Girls Hostel</h1>
-                <p className="text-xs text-white/70">Payment confirmation receipt</p>
+                <h1 className="break-words text-lg font-bold sm:text-xl">{t.common.hostelName}</h1>
+                <p className="text-xs text-white/70">{t.receipt.title}</p>
               </div>
             </div>
             <div className="min-w-0 text-left text-sm sm:text-right">
-              <p className="break-all font-semibold">Receipt #{payment.receipt_no}</p>
-              <p className="mt-1 text-xs text-white/70">{new Date(payment.paid_at).toLocaleString()}</p>
+              <p className="break-all font-semibold">{t.receipt.receipt} #{formatNumber(payment.receipt_no, locale)}</p>
+              <p className="mt-1 text-xs text-white/70">{formatDateTime(payment.paid_at, locale)}</p>
             </div>
           </div>
         </header>
 
         <div className="p-4 sm:p-8">
           <section className="grid gap-3 rounded-2xl bg-stone-50 p-4 sm:grid-cols-3">
-            <Line label="Resident" value={resident.name} />
-            <Line label="Room" value={resident.room_number || "Not assigned"} />
-            <Line label="Billing month" value={formatMonth(payment.period_month)} />
+            <Line label={t.receipt.resident} value={resident.name} />
+            <Line label={t.receipt.room} value={resident.room_number || t.common.notAssigned} />
+            <Line label={t.receipt.billingMonth} value={formatMonth(payment.period_month, locale)} />
           </section>
 
           <div className="my-5">
             <span className={`inline-flex rounded-full px-3 py-1.5 text-sm font-bold ${isPaid ? "bg-green-100 text-green-900" : "bg-accent-light text-charcoal"}`}>
-              Payment status: {isPaid ? "Paid in full" : "Partially paid"}
+              {t.receipt.paymentStatus} {isPaid ? t.receipt.paidInFull : t.receipt.partiallyPaid}
             </span>
           </div>
 
           <section aria-labelledby="receipt-transactions-title">
-            <h2 id="receipt-transactions-title" className="mb-3 text-xs font-bold uppercase tracking-[0.16em] text-brand">Transactions included</h2>
+            <h2 id="receipt-transactions-title" className="mb-3 text-xs font-bold uppercase tracking-[0.16em] text-brand">{t.receipt.transactionsIncluded}</h2>
             <div className="hidden overflow-hidden rounded-xl border border-line sm:block print:block">
               <table className="w-full text-sm">
                 <thead className="bg-stone-50 text-left text-xs uppercase tracking-wide text-muted">
-                  <tr><th className="px-4 py-3 font-semibold">#</th><th className="px-4 py-3 font-semibold">Payment time</th><th className="px-4 py-3 font-semibold">Method</th><th className="px-4 py-3 text-right font-semibold">Amount</th></tr>
+                  <tr><th className="px-4 py-3 font-semibold">#</th><th className="px-4 py-3 font-semibold">{t.receipt.paymentTime}</th><th className="px-4 py-3 font-semibold">{t.receipt.method}</th><th className="px-4 py-3 text-right font-semibold">{t.receipt.amount}</th></tr>
                 </thead>
                 <tbody className="divide-y divide-line/70">
                   {shown.map((item, index) => (
                     <tr key={item.id} className={item.id === payment.id ? "bg-accent-light" : ""}>
-                      <td className="px-4 py-3 text-charcoal">{index + 1}</td>
-                      <td className="px-4 py-3 text-charcoal">{new Date(item.paid_at).toLocaleString()}</td>
-                      <td className="px-4 py-3 text-charcoal">{item.method || "—"}</td>
-                      <td className="px-4 py-3 text-right font-semibold text-charcoal">{formatTaka(Number(item.amount))}</td>
+                      <td className="px-4 py-3 text-charcoal">{formatNumber(index + 1, locale)}</td>
+                      <td className="px-4 py-3 text-charcoal">{formatDateTime(item.paid_at, locale)}</td>
+                      <td className="px-4 py-3 text-charcoal">{formatPaymentMethod(item.method, locale, "—")}</td>
+                      <td className="px-4 py-3 text-right font-semibold text-charcoal">{formatCurrency(Number(item.amount), locale)}</td>
                     </tr>
                   ))}
                 </tbody>
-                <tfoot><tr className="border-t-2 border-line bg-stone-50"><td className="px-4 py-3 font-bold text-charcoal" colSpan={3}>Total paid</td><td className="px-4 py-3 text-right font-bold text-charcoal">{formatTaka(paidSoFar)}</td></tr></tfoot>
+                <tfoot><tr className="border-t-2 border-line bg-stone-50"><td className="px-4 py-3 font-bold text-charcoal" colSpan={3}>{t.receipt.totalPaid}</td><td className="px-4 py-3 text-right font-bold text-charcoal">{formatCurrency(paidSoFar, locale)}</td></tr></tfoot>
               </table>
             </div>
 
             <ul className="space-y-3 sm:hidden print:hidden">
               {shown.map((item, index) => (
                 <li key={item.id} className={`rounded-xl border p-3 ${item.id === payment.id ? "border-accent bg-accent-light" : "border-line"}`}>
-                  <div className="flex items-start justify-between gap-3"><p className="text-xs font-semibold text-muted">Payment {index + 1}</p><p className="shrink-0 font-bold text-charcoal">{formatTaka(Number(item.amount))}</p></div>
-                  <p className="mt-2 text-sm text-charcoal">{new Date(item.paid_at).toLocaleString()}</p>
-                  <p className="mt-1 text-xs text-muted">Method: {item.method || "Not specified"}</p>
+                  <div className="flex items-start justify-between gap-3"><p className="text-xs font-semibold text-muted">{t.receipt.payment} {formatNumber(index + 1, locale)}</p><p className="shrink-0 font-bold text-charcoal">{formatCurrency(Number(item.amount), locale)}</p></div>
+                  <p className="mt-2 text-sm text-charcoal">{formatDateTime(item.paid_at, locale)}</p>
+                  <p className="mt-1 text-xs text-muted">{t.receipt.method}: {formatPaymentMethod(item.method, locale, t.common.notSpecified)}</p>
                 </li>
               ))}
             </ul>
           </section>
 
           <section className="mt-6 divide-y divide-line/70 rounded-xl border border-line text-sm">
-            <Stat label="Monthly fee" value={formatTaka(fee)} />
-            <Stat label="Total paid" value={formatTaka(paidSoFar)} />
-            <Stat label="Remaining balance" value={remaining > 0 ? formatTaka(remaining) : "Fully paid"} highlight={remaining > 0} />
+            <Stat label={t.receipt.monthlyFee} value={formatCurrency(fee, locale)} />
+            <Stat label={t.receipt.totalPaid} value={formatCurrency(paidSoFar, locale)} />
+            <Stat label={t.receipt.remainingBalance} value={remaining > 0 ? formatCurrency(remaining, locale) : t.receipt.fullyPaid} highlight={remaining > 0} />
           </section>
 
           <section className="mt-16 grid grid-cols-2 gap-5 text-center text-xs text-muted sm:gap-16 sm:text-sm">
-            <div className="min-w-0 border-t border-stone-400 pt-2">Received by</div>
-            <div className="min-w-0 border-t border-stone-400 pt-2">Authorized signature</div>
+            <div className="min-w-0 border-t border-stone-400 pt-2">{t.receipt.receivedBy}</div>
+            <div className="min-w-0 border-t border-stone-400 pt-2">{t.receipt.authorizedSignature}</div>
           </section>
 
-          <p className="mt-10 text-center text-xs leading-5 text-muted">This is a computer-generated receipt from Kasturi Girls Hostel Management System.</p>
+          <p className="mt-10 text-center text-xs leading-5 text-muted">{t.receipt.generated}</p>
         </div>
       </article>
     </div>

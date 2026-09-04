@@ -40,6 +40,10 @@ body {
   color: var(--charcoal);
 }
 
+html[lang="bn-BD"] body {
+  font-family: var(--font-noto-bengali), ui-sans-serif, system-ui, sans-serif;
+}
+
 ::selection {
   background: rgba(244, 196, 33, 0.5);
   color: var(--charcoal);

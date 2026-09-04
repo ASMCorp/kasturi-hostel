@@ -3,8 +3,10 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
+import { useLanguage } from "@/components/LanguageProvider";
 
 export default function LogoutButton() {
+  const { dictionary: t } = useLanguage();
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
@@ -21,7 +23,7 @@ export default function LogoutButton() {
         const data = (await response.json().catch(() => null)) as
           | { error?: string }
           | null;
-        throw new Error(data?.error || "Unable to log out. Please try again.");
+        throw new Error(data?.error || t.nav.logoutError);
       }
 
       router.replace("/login");
@@ -30,7 +32,7 @@ export default function LogoutButton() {
       setError(
         cause instanceof Error
           ? cause.message
-          : "Unable to log out. Check your connection and try again.",
+          : t.nav.logoutConnectionError,
       );
       setPending(false);
     }
@@ -46,8 +48,8 @@ export default function LogoutButton() {
         aria-busy={pending}
         className="btn-secondary whitespace-nowrap"
       >
-        {pending && <LoadingSpinner label="Logging out" />}
-        <span>{pending ? "Logging out…" : "Log out"}</span>
+        {pending && <LoadingSpinner label={t.nav.loggingOutLabel} />}
+        <span>{pending ? t.nav.loggingOut : t.nav.logOut}</span>
       </button>
       <p
         aria-live="assertive"
